@@ -1,15 +1,21 @@
-import { PrismaClient } from "@prisma/client";
+// src/lib/db/index.ts
+import { PrismaClient } from '@prisma/client';
 
-declare global {
-  // allow global `var` declarations
-  // eslint-disable-next-line no-var
-  var db: PrismaClient | undefined;
+if (!process.env.DATABASE_URL) {
+  throw new Error('Missing DATABASE_URL environment variable.');
 }
 
-export const db =
-  global.db ||
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
+}
+
+export const prisma =
+  global.prisma ??
   new PrismaClient({
-    log: ["query"],
+    log: process.env.NODE_ENV === 'development' ? ['query', 'warn'] : ['warn'],
   });
 
-if (process.env.NODE_ENV !== "production") global.db = db;
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}

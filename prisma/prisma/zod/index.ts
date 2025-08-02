@@ -56,7 +56,7 @@ export type InputJsonValueType = z.infer<typeof InputJsonValueSchema>;
 
 export const TransactionIsolationLevelSchema = z.enum(['ReadUncommitted','ReadCommitted','RepeatableRead','Serializable']);
 
-export const UserScalarFieldEnumSchema = z.enum(['id','clerkId','email','name','createdAt']);
+export const UserScalarFieldEnumSchema = z.enum(['id','clerkId','email','firstName','lastName','imageUrl','externalId','createdAt']);
 
 export const BotScalarFieldEnumSchema = z.enum(['id','name','description','strategy','aiConfig','status','userId']);
 
@@ -91,8 +91,11 @@ export type BotStatusType = `${z.infer<typeof BotStatusSchema>}`
 export const UserSchema = z.object({
   id: z.string().uuid(),
   clerkId: z.string(),
-  email: z.string(),
-  name: z.string().nullable(),
+  email: z.string().nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  externalId: z.string().nullable(),
   createdAt: z.coerce.date(),
 })
 
