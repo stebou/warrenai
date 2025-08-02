@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator zod {
+  provider                = "zod-prisma-types"
+  output                  = "prisma/zod"
+  prismaClientPath        = "@prisma/client"
+  useTypeAssertions       = true
+  prismaJsonNullability   = "nullable"
+  createInputTypes        = false
+  addIncludeType          = false
+  addSelectType           = false
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+
+  bots      Bot[]
+  plans     Subscription[]
+}
+
+model Bot {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  strategy    String
+  aiConfig    Json
+  status      BotStatus  @default(INACTIVE)
+  userId      String
+
+  user        User       @relation(fields: [userId], references: [id])
+  sessions    TradingSession[]
+}
+
+enum BotStatus {
+  INACTIVE
+  ACTIVE
+  ERROR
+}
+
+model TradingSession {
+  id         String   @id @default(uuid())
+  botId      String
+  startedAt  DateTime @default(now())
+  endedAt    DateTime?
+  performance Json?
+  log        Json?
+
+  bot        Bot      @relation(fields: [botId], references: [id])
+}
+
+model Subscription {
+  id           String   @id @default(uuid())
+  userId       String
+  stripeId     String
+  priceId      String
+  status       String
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id])
+}
+
