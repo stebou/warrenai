@@ -1,172 +1,107 @@
-// Fichier : src/app/api/webhooks/clerk/route.ts
-import { Webhook } from 'svix';
-import { headers } from 'next/headers';
-import { WebhookEvent } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
-import { NextRequest } from 'next/server';
+// src/app/api/webhooks/user/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyWebhook } from '@clerk/nextjs/webhooks';
+import { prisma } from '@/lib/db'; // attention : export named
+// Si tu utilises un export différent, ajuste l'import ci-dessus
 
-// Types TypeScript pour les données de mise à jour
-interface UserUpdateData {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+interface ClerkUserPayload {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  primary_email_address_id?: string | null;
+  email_addresses?: Array<{ id: string; email_address: string }>;
+  external_id?: string | null;
+  profile_image_url?: string | null;
 }
 
 export async function POST(req: NextRequest) {
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
+  const rawBody = await req.text();
+  const isDev = process.env.NODE_ENV !== 'production';
 
-  if (!WEBHOOK_SECRET) {
-    throw new Error(
-      'Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local'
-    );
-  }
-
-  // Obtenir les en-têtes
-  const headerPayload = await headers();
-  const svix_id = headerPayload.get('svix-id');
-  const svix_timestamp = headerPayload.get('svix-timestamp');
-  const svix_signature = headerPayload.get('svix-signature');
-
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    console.error('Webhook error: Missing svix headers');
-    return new Response('Error occured -- no svix headers', {
-      status: 400,
-    });
-  }
-
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
-  const wh = new Webhook(WEBHOOK_SECRET);
-  let evt: WebhookEvent;
+  let event: any;
 
   try {
-    evt = wh.verify(body, {
-      'svix-id': svix_id,
-      'svix-timestamp': svix_timestamp,
-      'svix-signature': svix_signature,
-    }) as WebhookEvent;
+    if (isDev) {
+      // En dev, accepte un payload brut (simulateur)
+      event = JSON.parse(rawBody);
+    } else {
+      // En prod, vérification stricte via Clerk/Svix
+      event = verifyWebhook({
+        payload: rawBody,
+        signature: req.headers.get('svix-signature') ?? '',
+        timestamp: req.headers.get('svix-timestamp') ?? '',
+        id: req.headers.get('svix-id') ?? '',
+        secret: process.env.CLERK_WEBHOOK_SECRET!,
+      });
+    }
   } catch (err) {
-    console.error('Error verifying webhook:', err);
-    return new Response('Error occured', {
-      status: 400,
-    });
+    console.error('❌ Invalid webhook signature or malformed body', err);
+    return new NextResponse('Invalid signature or body', { status: 400 });
   }
 
-  const eventType = evt.type;
-  console.log(`[CLERK_WEBHOOK] Received event of type: ${eventType}`);
-  console.log(`[CLERK_WEBHOOK] Event data:`, JSON.stringify(evt.data, null, 2));
+  const eventType: string = event.type;
+  const user = event.data as ClerkUserPayload;
 
-  if (eventType === 'user.created') {
-    const {
-      id,
-      email_addresses,
-      first_name,
-      last_name,
-      primary_email_address_id,
-    } = evt.data;
+  if (!user?.id) {
+    console.error('[WEBHOOK] Missing user id in payload');
+    return new NextResponse('Missing user id', { status: 400 });
+  }
 
-    // Validation améliorée - on vérifie juste l'ID
-    if (!id) {
-      console.error('[CLERK_WEBHOOK] Missing user ID');
-      return new Response('Error: Missing user ID', { status: 400 });
-    }
+  // Resolve email: prefer primary_email_address_id if present
+  const emailFromList =
+    user.email_addresses?.find(
+      (e) => e.id === user.primary_email_address_id
+    )?.email_address ?? null;
 
-    // Gestion intelligente de l'email
-    let userEmail = '';
-
-    if (email_addresses && email_addresses.length > 0) {
-      userEmail = email_addresses[0].email_address;
-    } else if (primary_email_address_id) {
-      // Si email_addresses est vide mais qu'on a un primary_email_address_id,
-      // on crée un email temporaire basé sur l'ID Clerk
-      userEmail = `user_${id.replace('user_', '')}@temp.clerk`;
-      console.log(`[CLERK_WEBHOOK] Using temporary email: ${userEmail}`);
-    } else {
-      console.error('[CLERK_WEBHOOK] No email found, using fallback');
-      userEmail = `${id}@noemail.temp`;
-    }
-
-    try {
-      const user = await prisma.user.create({
+  try {
+    if (eventType === 'user.created') {
+      // Créer l'utilisateur
+      await prisma.user.create({
         data: {
-          clerkId: id,
-          email: userEmail,
-          firstName: first_name || null,
-          lastName: last_name || null,
+          clerkId: user.id,
+          email: emailFromList ?? `${user.id}@noemail.temp`,
+          firstName: user.first_name ?? undefined,
+          lastName: user.last_name ?? undefined,
+          imageUrl: user.profile_image_url ?? undefined,
+          externalId: user.external_id ?? undefined,
         },
       });
+      console.log(`[WEBHOOK] User ${user.id} created.`);
+    } else if (eventType === 'user.updated') {
+      // Mise à jour intelligente : on n'envoie pas null pour email si absent
+      const updateData: any = {};
 
-      console.log(
-        `[CLERK_WEBHOOK] User ${id} created in database successfully:`,
-        user
-      );
-    } catch (dbError) {
-      console.error(
-        `[CLERK_WEBHOOK] Database error creating user ${id}:`,
-        dbError
-      );
-      return new Response('Database error', { status: 500 });
-    }
-  }
-
-  if (eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name } = evt.data;
-
-    if (!id) {
-      return new Response('Error: Missing user ID', { status: 400 });
-    }
-
-    try {
-      const updateData: UserUpdateData = {
-        firstName: first_name || null,
-        lastName: last_name || null,
-      };
-
-      // Mise à jour de l'email seulement s'il existe
-      if (email_addresses && email_addresses.length > 0) {
-        updateData.email = email_addresses[0].email_address;
+      if (user.first_name !== undefined) {
+        updateData.firstName = user.first_name;
+      }
+      if (user.last_name !== undefined) {
+        updateData.lastName = user.last_name;
+      }
+      if (emailFromList !== null) {
+        updateData.email = emailFromList;
+      }
+      if (user.profile_image_url !== undefined) {
+        updateData.imageUrl = user.profile_image_url;
+      }
+      if (user.external_id !== undefined) {
+        updateData.externalId = user.external_id;
       }
 
-      const user = await prisma.user.update({
-        where: {
-          clerkId: id,
-        },
+      await prisma.user.update({
+        where: { clerkId: user.id },
         data: updateData,
       });
-
-      console.log(`[CLERK_WEBHOOK] User ${id} updated in database:`, user);
-    } catch (dbError) {
-      console.error(
-        `[CLERK_WEBHOOK] Database error updating user ${id}:`,
-        dbError
-      );
-      return new Response('Database error', { status: 500 });
-    }
-  }
-
-  if (eventType === 'user.deleted') {
-    const { id } = evt.data;
-
-    if (!id) {
-      return new Response('Error: Missing user ID', { status: 400 });
-    }
-
-    try {
+      console.log(`[WEBHOOK] User ${user.id} updated.`);
+    } else if (eventType === 'user.deleted') {
       await prisma.user.deleteMany({
-        where: {
-          clerkId: id,
-        },
+        where: { clerkId: user.id },
       });
-
-      console.log(`[CLERK_WEBHOOK] User ${id} deleted from database.`);
-    } catch (dbError) {
-      console.error(
-        `[CLERK_WEBHOOK] Database error deleting user ${id}:`,
-        dbError
-      );
-      return new Response('Database error', { status: 500 });
+      console.log(`[WEBHOOK] User ${user.id} deleted.`);
     }
+  } catch (e) {
+    console.error('[WEBHOOK] Prisma operation failed', e);
+    return new NextResponse('Database error', { status: 500 });
   }
 
-  return new Response('Webhook processed successfully', { status: 200 });
+  return new NextResponse('ok', { status: 200 });
 }

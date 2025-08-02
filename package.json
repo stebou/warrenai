@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "fix-zod": "node scripts/fix-zod-types.js"
+    "fix-zod": "node scripts/fix-zod-types.js",
+    "send-webhook": "node scripts/send-signed-webhook.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.28.1",
@@ -39,8 +40,10 @@
     "@types/node": "^20.19.9",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
+    "dotenv": "^17.2.1",
     "eslint": "^9.32.0",
     "eslint-config-next": "15.4.5",
+    "node-fetch": "^3.3.2",
     "prisma": "^6.13.0",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.9.2",

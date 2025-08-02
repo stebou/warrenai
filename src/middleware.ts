@@ -1,14 +1,14 @@
 // src/middleware.ts
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-// Définir les routes publiques qui ne nécessitent pas d'authentification
+// Routes publiques (pas besoin d'être authentifié)
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/api/webhooks(.*)',
-  '/sso-callback',
-  '/privacy-policy',
+  '/sso-callback(.*)',
+  '/privacy-policy(.*)',
+  '/api/webhooks(.*)', // <--- important : exclut /api/webhooks/user
   '/api/stripe/webhooks(.*)',
 ]);
 
@@ -20,7 +20,8 @@ export default clerkMiddleware((auth, req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Aplique la middleware partout sauf sur les fichiers statiques/_next
+    '/((?!_next|[^?]*\\.(?:css|js|png|jpg|jpeg|webp|svg|ico|json)).*)',
     '/(api|trpc)(.*)',
   ],
 };
