@@ -2,17 +2,18 @@
   "name": "trading",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "prisma generate && pnpm fix-zod && next dev",
-    "build": "prisma generate && pnpm fix-zod && next build",
-    "start": "next start",
-    "lint": "next lint",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
-    "fix-zod": "node scripts/fix-zod-types.js",
-    "send-webhook": "node scripts/send-signed-webhook.js"
-  },
+"scripts": {
+  "dev": "prisma generate && pnpm run fix-zod && next dev",
+  "prebuild": "prisma generate && pnpm run fix-zod",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint",
+  "db:generate": "prisma generate",
+  "db:migrate": "prisma migrate dev",
+  "db:studio": "prisma studio",
+  "fix-zod": "node scripts/fix-zod-types.js",
+  "send-webhook": "node scripts/send-signed-webhook.js"
+},
   "dependencies": {
     "@clerk/nextjs": "^6.28.1",
     "@prisma/client": "6.13.0",

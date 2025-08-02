@@ -16,13 +16,13 @@ export const transformJsonNull = (v?: NullableJsonInput) => {
   return v;
 };
 
-export const JsonValueSchema: z.ZodType<Prisma.JsonValue> = z.lazy(() =>
+export const JsonValueSchema: z.ZodType<any> = z.lazy(() =>
   z.union([
     z.string(),
     z.number(),
     z.boolean(),
     z.literal(null),
-    z.record(z.lazy(() => JsonValueSchema.optional())),
+    z.record(z.string(), z.lazy(() => JsonValueSchema)),
     z.array(z.lazy(() => JsonValueSchema)),
   ])
 );
@@ -36,13 +36,13 @@ export const NullableJsonValue = z
 
 export type NullableJsonValueType = z.infer<typeof NullableJsonValue>;
 
-export const InputJsonValueSchema: z.ZodType<Prisma.InputJsonValue> = z.lazy(() =>
+export const InputJsonValueSchema: z.ZodType<any> = z.lazy(() =>
   z.union([
     z.string(),
     z.number(),
     z.boolean(),
-    z.object({ toJSON: z.function(z.tuple([]), z.any()) }),
-    z.record(z.lazy(() => z.union([InputJsonValueSchema, z.literal(null)]))),
+    z.object({ toJSON: z.function() }),
+    z.record(z.string(), z.lazy(() => z.union([InputJsonValueSchema, z.literal(null)]))),
     z.array(z.lazy(() => z.union([InputJsonValueSchema, z.literal(null)]))),
   ])
 );
