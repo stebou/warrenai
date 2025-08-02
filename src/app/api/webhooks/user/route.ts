@@ -56,10 +56,11 @@ export async function POST(req: NextRequest) {
     )?.email_address ?? null;
 
   try {
-    if (eventType === 'user.created') {
-      // Créer l'utilisateur
-      await prisma.user.create({
-        data: {
+    if (eventType === 'user.created' || eventType === 'user.updated') {
+      // Upsert covers both create and update, avoiding unique constraint errors
+      await prisma.user.upsert({
+        where: { clerkId: user.id },
+        create: {
           clerkId: user.id,
           email: emailFromList ?? `${user.id}@noemail.temp`,
           firstName: user.first_name ?? undefined,
@@ -67,37 +68,18 @@ export async function POST(req: NextRequest) {
           imageUrl: user.profile_image_url ?? undefined,
           externalId: user.external_id ?? undefined,
         },
+        update: {
+          // Only set fields if present to avoid overwriting with undefined/null
+          ...(user.first_name !== undefined ? { firstName: user.first_name } : {}),
+          ...(user.last_name !== undefined ? { lastName: user.last_name } : {}),
+          ...(emailFromList !== null ? { email: emailFromList } : {}),
+          ...(user.profile_image_url !== undefined ? { imageUrl: user.profile_image_url } : {}),
+          ...(user.external_id !== undefined ? { externalId: user.external_id } : {}),
+        },
       });
-      console.log(`[WEBHOOK] User ${user.id} created.`);
-    } else if (eventType === 'user.updated') {
-      // Mise à jour intelligente : on n'envoie pas null pour email si absent
-      const updateData: any = {};
-
-      if (user.first_name !== undefined) {
-        updateData.firstName = user.first_name;
-      }
-      if (user.last_name !== undefined) {
-        updateData.lastName = user.last_name;
-      }
-      if (emailFromList !== null) {
-        updateData.email = emailFromList;
-      }
-      if (user.profile_image_url !== undefined) {
-        updateData.imageUrl = user.profile_image_url;
-      }
-      if (user.external_id !== undefined) {
-        updateData.externalId = user.external_id;
-      }
-
-      await prisma.user.update({
-        where: { clerkId: user.id },
-        data: updateData,
-      });
-      console.log(`[WEBHOOK] User ${user.id} updated.`);
+      console.log(`[WEBHOOK] User ${user.id} upserted (${eventType}).`);
     } else if (eventType === 'user.deleted') {
-      await prisma.user.deleteMany({
-        where: { clerkId: user.id },
-      });
+      await prisma.user.deleteMany({ where: { clerkId: user.id } });
       console.log(`[WEBHOOK] User ${user.id} deleted.`);
     }
   } catch (e) {
