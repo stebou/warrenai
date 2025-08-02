@@ -1,14 +1,13 @@
-import { checkAuth } from "@/lib/auth/utils";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { ClerkProvider } from "@clerk/nextjs";
-export default async function AppLayout({
+
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await checkAuth();
   return ( <main>
 <ClerkProvider><div className="flex h-screen">
 <Sidebar />
