@@ -7,7 +7,8 @@ import { NextRequest } from 'next/server';
 
 // Types TypeScript pour les données de mise à jour
 interface UserUpdateData {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
 }
 
@@ -90,11 +91,8 @@ export async function POST(req: NextRequest) {
         data: {
           clerkId: id,
           email: userEmail,
-          name:
-            `${first_name || ''} ${last_name || ''}`.trim() || 'Utilisateur',
-          // Ajoutez ici d'autres champs par défaut si nécessaire
-          // creditsRemaining: 5,
-          // currentPlan: 'free',
+          firstName: first_name || null,
+          lastName: last_name || null,
         },
       });
 
@@ -120,7 +118,8 @@ export async function POST(req: NextRequest) {
 
     try {
       const updateData: UserUpdateData = {
-        name: `${first_name || ''} ${last_name || ''}`.trim(),
+        firstName: first_name || null,
+        lastName: last_name || null,
       };
 
       // Mise à jour de l'email seulement s'il existe
