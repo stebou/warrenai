@@ -1,8 +1,7 @@
 // src/app/api/webhooks/user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWebhook } from '@clerk/nextjs/webhooks';
-import { prisma } from '@/lib/db'; // attention : export named
-// Si tu utilises un export différent, ajuste l'import ci-dessus
+import { Webhook } from 'svix';
+import { prisma } from '@/lib/db';
 
 interface ClerkUserPayload {
   id: string;
@@ -25,14 +24,14 @@ export async function POST(req: NextRequest) {
       // En dev, accepte un payload brut (simulateur)
       event = JSON.parse(rawBody);
     } else {
-      // En prod, vérification stricte via Clerk/Svix
-      event = verifyWebhook({
-        payload: rawBody,
-        signature: req.headers.get('svix-signature') ?? '',
-        timestamp: req.headers.get('svix-timestamp') ?? '',
-        id: req.headers.get('svix-id') ?? '',
-        secret: process.env.CLERK_WEBHOOK_SECRET!,
-      });
+      // En prod, vérification manuelle avec Svix
+      const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+      const headers = {
+        'svix-id': req.headers.get('svix-id') || '',
+        'svix-timestamp': req.headers.get('svix-timestamp') || '',
+        'svix-signature': req.headers.get('svix-signature') || '',
+      };
+      event = wh.verify(rawBody, headers);
     }
   } catch (err) {
     console.error('❌ Invalid webhook signature or malformed body', err);
@@ -41,9 +40,12 @@ export async function POST(req: NextRequest) {
 
   const eventType: string = event.type;
   const user = event.data as ClerkUserPayload;
+  
+  console.log('[WEBHOOK] Event received:', { eventType, userId: user?.id, isDev });
+  console.log('[WEBHOOK] Raw event:', JSON.stringify(event, null, 2));
 
   if (!user?.id) {
-    console.error('[WEBHOOK] Missing user id in payload');
+    console.error('[WEBHOOK] Missing user id in payload', { user, event });
     return new NextResponse('Missing user id', { status: 400 });
   }
 
