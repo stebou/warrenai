@@ -1,18 +1,18 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    {
+      "src": "/api/webhooks/user",
+      "methods": ["POST"],
+      "headers": {
+        "x-vercel-protection-bypass": "1"
+      },
+      "dest": "/api/webhooks/user"
+    }
+  ],
   "functions": {
     "src/app/api/webhooks/**/*.ts": {
       "maxDuration": 10
     }
-  },
-  "headers": [
-    {
-      "source": "/api/webhooks/(.*)",
-      "headers": [
-        {
-          "key": "X-Vercel-Skip-Protection",
-          "value": "1"
-        }
-      ]
-    }
-  ]
+  }
 }

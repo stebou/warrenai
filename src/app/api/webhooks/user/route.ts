@@ -1,52 +1,51 @@
-// src/app/api/webhooks/user/route.ts
 import { Webhook } from 'svix';
-import { headers } from 'next/headers';
-import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-
-// Disable middleware for this route
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || '';
 
 export async function POST(req: Request) {
   console.log('Webhook received');
   
+  const secret = process.env.CLERK_WEBHOOK_SECRET || '';
+  
+  if (!secret) {
+    console.error('CLERK_WEBHOOK_SECRET not found');
+    return new Response('Webhook secret not configured', { status: 500 });
+  }
+
   try {
     const payload = await req.text();
-    const headerList = await headers();
-    const headerPayload = Object.fromEntries(headerList.entries());
+    const headerPayload = {
+      'svix-id': req.headers.get('svix-id') || '',
+      'svix-timestamp': req.headers.get('svix-timestamp') || '',
+      'svix-signature': req.headers.get('svix-signature') || '',
+    };
 
     console.log('Headers received:', Object.keys(headerPayload));
 
-    if (!WEBHOOK_SECRET) {
-      console.error('CLERK_WEBHOOK_SECRET not found');
-      return new NextResponse('Webhook secret not configured', { status: 500 });
-    }
-
-    const wh = new Webhook(WEBHOOK_SECRET);
+    const wh = new Webhook(secret);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let evt: any;
-
+    
     try {
       evt = wh.verify(payload, headerPayload);
       console.log('Webhook verified successfully, event type:', evt.type);
     } catch (err) {
       console.error('Webhook verification failed:', err);
-      return new NextResponse('Webhook verification failed', { status: 400 });
+      return new Response('Invalid signature', { status: 400 });
     }
 
     const { id, email_addresses, first_name, last_name } = evt.data;
 
-    if (evt.type === 'user.created') {
+    if (evt.type === 'user.created' || evt.type === 'user.updated') {
       const email = email_addresses?.[0]?.email_address;
-      console.log('Creating user:', { id, email, first_name, last_name });
+      console.log(`User ${evt.type}:`, { id, email, first_name, last_name });
 
       try {
         await db.user.upsert({
           where: { clerkId: id },
-          update: {},
+          update: {
+            email,
+            name: `${first_name || ''} ${last_name || ''}`.trim(),
+          },
           create: {
             clerkId: id,
             email,
@@ -56,18 +55,27 @@ export async function POST(req: Request) {
         console.log('User created/updated successfully');
       } catch (dbError) {
         console.error('Database error:', dbError);
-        return new NextResponse('Database error', { status: 500 });
+        return new Response('Database error', { status: 500 });
       }
     }
 
-    return new NextResponse('OK', { status: 200 });
+    if (evt.type === 'user.deleted') {
+      console.log('Deleting user:', { id });
+      
+      try {
+        await db.user.delete({
+          where: { clerkId: id },
+        });
+        console.log('User deleted successfully');
+      } catch (dbError) {
+        console.error('Database delete error:', dbError);
+        return new Response('Database error', { status: 500 });
+      }
+    }
+
+    return new Response('OK', { status: 200 });
   } catch (error) {
     console.error('Webhook handler error:', error);
-    return new NextResponse('Internal server error', { status: 500 });
+    return new Response('Internal server error', { status: 500 });
   }
-}
-
-// Add GET handler for testing
-export async function GET() {
-  return new NextResponse('Webhook endpoint is working', { status: 200 });
 }
