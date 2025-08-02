@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "src/app/api/webhooks/**/*.ts": {
+      "maxDuration": 10
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/webhooks/(.*)",
+      "headers": [
+        {
+          "key": "X-Vercel-Skip-Protection",
+          "value": "1"
+        }
+      ]
+    }
+  ]
+}

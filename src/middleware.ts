@@ -7,7 +7,21 @@ const isProtectedRoute = createRouteMatcher([
   '/settings(.*)',
 ]);
 
+// Define public routes that should NEVER be protected
+const isPublicRoute = createRouteMatcher([
+  '/api/webhooks(.*)',
+  '/api/webhooks/user(.*)',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/',
+]);
+
 export default clerkMiddleware((auth, req) => {
+  // Explicitly skip authentication for public routes
+  if (isPublicRoute(req)) {
+    return;
+  }
+  
   // Protect routes that require authentication
   if (isProtectedRoute(req)) {
     auth.protect();

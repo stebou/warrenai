@@ -4,6 +4,10 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Disable middleware for this route
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || '';
 
 export async function POST(req: Request) {
@@ -61,4 +65,9 @@ export async function POST(req: Request) {
     console.error('Webhook handler error:', error);
     return new NextResponse('Internal server error', { status: 500 });
   }
+}
+
+// Add GET handler for testing
+export async function GET() {
+  return new NextResponse('Webhook endpoint is working', { status: 200 });
 }
