@@ -1,61 +1,29 @@
-// src/lib/trading/agents/bot_creation/prompt_builder.ts
+import type { BotCreationConfig } from './types';
 
 /**
- * Configuration utilisateur pour la création d'un bot.
+ * Construit le prompt textuel à envoyer au LLM pour générer une spécification de bot.
+ * @param config La configuration initiale de l'utilisateur.
+ * @returns Une chaîne de caractères formatée comme un prompt.
  */
-export interface BotCreationConfig {
-  name: string;
-  description?: string;
-  initialAllocation?: number; // en unité monétaire
-  strategyHints?: string[]; // suggestions de stratégies
-  riskLimits: { max_position_size: number; max_daily_loss: number };
-  otherConfig?: Record<string, any>;
-}
+export function buildBotSpecPrompt(config: BotCreationConfig): string {
+  const parts: string[] = [
+    'You are an expert in quantitative trading strategies. Your task is to generate a detailed trading bot specification in JSON format based on the following user requirements.',
+    `The user wants a bot named "${config.name}".`,
+  ];
 
-/**
- * Construit un prompt sécurisé à envoyer à l'IA pour générer une spécification de bot.
- * Effectue une sanitation minimale des champs pour éviter injection.
- */
-export function buildBotPrompt(config: BotCreationConfig): string {
-  const sanitized: Record<string, any> = {
-    name: String(config.name),
-    description: config.description ? String(config.description) : undefined,
-    initialAllocation:
-      typeof config.initialAllocation === 'number'
-        ? config.initialAllocation
-        : undefined,
-    strategyHints: Array.isArray(config.strategyHints)
-      ? config.strategyHints.map(String)
-      : undefined,
-    riskLimits: {
-      max_position_size: Number(config.riskLimits.max_position_size),
-      max_daily_loss: Number(config.riskLimits.max_daily_loss),
-    },
-    otherConfig: config.otherConfig || {},
-  };
-
-  // Construire le prompt en texte clair en ignorant les undefined
-  const parts: string[] = [];
-  parts.push('Build a high-performance trading bot with the following configuration:');
-  parts.push(`Name: ${sanitized.name}`);
-  if (sanitized.description) {
-    parts.push(`Description: ${sanitized.description}`);
-  }
-  if (sanitized.initialAllocation !== undefined) {
-    parts.push(`Initial allocation: ${sanitized.initialAllocation}`);
-  }
-  if (sanitized.strategyHints) {
-    parts.push(`Strategy hints: ${sanitized.strategyHints.join(', ')}`);
-  }
-  parts.push('Risk limits:');
-  parts.push(`  - Max position size: ${sanitized.riskLimits.max_position_size}`);
-  parts.push(`  - Max daily loss: ${sanitized.riskLimits.max_daily_loss}`);
-  if (sanitized.otherConfig && Object.keys(sanitized.otherConfig).length > 0) {
-    parts.push('Additional config:');
-    parts.push(JSON.stringify(sanitized.otherConfig, null, 2));
+  if (config.description) {
+    parts.push(`User-provided description: "${config.description}"`);
   }
 
-  parts.push('Provide strategy recommendations, risk controls, and execution plan optimized for low latency.');
+  if (config.strategyHints && config.strategyHints.length > 0) {
+    parts.push(`The user suggests these strategies or keywords: ${config.strategyHints.join(', ')}.`);
+  }
 
+  parts.push('The bot must strictly adhere to the following risk limits:');
+  parts.push(`- Maximum position size: ${config.riskLimits.max_position_size * 100}% of total capital per trade.`);
+  parts.push(`- Maximum daily loss (stop-loss): ${config.riskLimits.max_daily_loss * 100}% of starting daily capital.`);
+  
+  parts.push('Based on all the above, provide a JSON object with three keys: "strategy" (a short, descriptive name for the chosen strategy, e.g., "MeanReversion_RSI"), "description" (a 1-2 sentence explanation of how the bot works), and "aiConfig" (a JSON object with specific parameters like entry/exit thresholds, indicators to use, etc.).');
+  
   return parts.join('\n');
 }

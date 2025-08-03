@@ -58,7 +58,7 @@ export const TransactionIsolationLevelSchema = z.enum(['ReadUncommitted','ReadCo
 
 export const UserScalarFieldEnumSchema = z.enum(['id','clerkId','email','firstName','lastName','imageUrl','externalId','createdAt']);
 
-export const BotScalarFieldEnumSchema = z.enum(['id','name','description','strategy','aiConfig','status','promptVersion','userId']);
+export const BotScalarFieldEnumSchema = z.enum(['id','name','description','strategy','aiConfig','status','promptVersion','promptText','source','model','generatedAt','userId','createdAt','updatedAt']);
 
 export const TradingSessionScalarFieldEnumSchema = z.enum(['id','botId','startedAt','endedAt','performance','log']);
 
@@ -76,7 +76,7 @@ export const NullsOrderSchema = z.enum(['first','last']);
 
 export const JsonNullValueFilterSchema = z.enum(['DbNull','JsonNull','AnyNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.JsonNull : value === 'AnyNull' ? Prisma.AnyNull : value);
 
-export const BotStatusSchema = z.enum(['INACTIVE','ACTIVE','ERROR']);
+export const BotStatusSchema = z.enum(['ACTIVE','INACTIVE','ARCHIVED','ERROR']);
 
 export type BotStatusType = `${z.infer<typeof BotStatusSchema>}`
 
@@ -107,13 +107,19 @@ export type User = z.infer<typeof UserSchema>
 
 export const BotSchema = z.object({
   status: BotStatusSchema,
-  id: z.string().uuid(),
+  id: z.string().cuid(),
   name: z.string(),
-  description: z.string().nullable(),
+  description: z.string(),
   strategy: z.string(),
   aiConfig: JsonValueSchema,
   promptVersion: z.string().nullable(),
+  promptText: z.string().nullable(),
+  source: z.string().nullable(),
+  model: z.string().nullable(),
+  generatedAt: z.coerce.date().nullable(),
   userId: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 })
 
 export type Bot = z.infer<typeof BotSchema>

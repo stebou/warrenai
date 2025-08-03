@@ -1,55 +1,50 @@
-import { buildBotPrompt } from './prompt_builder';
-import type { LLMClient } from '../../llm/llm_client';
-import { MockLLMClient } from '../../llm/mock_client';
-import { OpenAIClient } from '../../llm/openai_client';
-import { getCached, setCached } from '../../cache';
+import { createHash } from 'crypto';
 import { log } from '@/lib/logger';
-import { env } from '@/lib/env.mjs';
-import crypto from 'crypto';
+import { getCached, setCached } from '../cache';
+import { getLlmClient } from '@/lib/trading/llm/llm_client';
+import { buildBotSpecPrompt } from './prompt_builder';
+import { parseBotSpecResponse } from './parser';
+import type { BotCreationConfig, BotSpec } from './types';
 
-// Sélectionne le client LLM en fonction de la variable d'environnement
-const llmClient: LLMClient = env.USE_REAL_LLM ? new OpenAIClient() : new MockLLMClient();
+export type { BotCreationConfig, BotSpec };
 
-export interface BotCreationConfig {
-  name: string;
-  description?: string;
-  initialAllocation?: number;
-  strategyHints?: string[];
-  riskLimits: { max_position_size: number; max_daily_loss: number };
-  otherConfig?: Record<string, any>;
+function generateCacheKey(config: BotCreationConfig): string {
+  const { name, ...cacheableConfig } = config;
+  const configString = JSON.stringify(cacheableConfig);
+  return createHash('sha256').update(configString).digest('hex');
 }
 
-// Utilise crypto pour un hash plus robuste, garantissant une meilleure unicité pour le cache
-function hashPrompt(prompt: string): string {
-  return crypto.createHash('sha256').update(prompt).digest('hex');
-}
+export async function generateBotFromConfig(config: BotCreationConfig): Promise<BotSpec> {
+  const llmClient = getLlmClient();
+  const prompt = buildBotSpecPrompt(config);
+  const cacheKey = generateCacheKey(config);
 
-export async function generateBotFromConfig(config: BotCreationConfig) {
-  const prompt = buildBotPrompt(config);
-  const cacheKey = `botSpec:${hashPrompt(prompt)}`;
-
-  // 1. Vérifier le cache d'abord
-  const cached = getCached(cacheKey);
+  const cached = getCached<Omit<BotSpec, 'name'>>(cacheKey);
   if (cached) {
-    log.info('[Agent] Cache hit for botSpec', { cacheKey });
+    log.info('[Agent] Cache hit. Returning stored bot specification.', { cacheKey });
     return {
       ...cached,
-      name: config.name, // Correction 1: 'name' est placé après pour avoir la priorité
+      name: config.name,
       fromCache: true,
+      promptVersion: cacheKey,
     };
   }
 
-  // 2. Si pas de cache, appeler le client LLM (réel ou mock)
-  log.info('[Agent] Generating new bot spec from LLM', { name: config.name });
-  const botSpec = await llmClient.generateBotSpec(prompt);
+  log.info('[Agent] Cache miss. Generating new bot spec from LLM.', { cacheKey });
 
-  // 3. Mettre le nouveau résultat en cache
-  setCached(cacheKey, botSpec);
-  
-  // 4. Retourner la spécification complète du bot
+  // CORRECTION : La méthode s'appelle `generateBotSpec`, pas `call`.
+  const botSpecFromLLM = await llmClient.generateBotSpec(prompt);
+
+  // Le parser n'est plus nécessaire ici car le client LLM retourne déjà un objet BotSpec.
+  // On stocke directement la réponse du LLM dans le cache.
+  const { name, ...cacheableSpec } = botSpecFromLLM;
+  setCached(cacheKey, cacheableSpec);
+  log.info('[Agent] New bot spec stored in cache.', { cacheKey });
+
   return {
-    ...botSpec,
-    name: config.name, // Correction 1: 'name' est placé après pour avoir la priorité
-    promptVersion: cacheKey, // Inclure la version du prompt pour le suivi
+    ...botSpecFromLLM,
+    name: config.name, // On s'assure d'utiliser le nom demandé par l'utilisateur
+    fromCache: false,
+    promptVersion: cacheKey,
   };
-} // Correction 2: Ajout de
+}

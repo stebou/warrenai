@@ -4,11 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { log } from '@/lib/logger';
 import { generateBotFromConfig, type BotCreationConfig } from '@/lib/trading/agents/bot_creation/agent';
 import { BotStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export async function POST(req: Request) {
   try {
     // 1. Authentification et récupération de l'ID utilisateur
-    // CORRECTION : auth() est une fonction asynchrone et doit être attendue avec 'await'
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     log.info('Calling bot creation agent', { name: body.name });
     const botSpec = await generateBotFromConfig(body);
 
-    // 4. Création du bot dans la base de données avec la promptVersion
+    // 4. Création du bot dans la base de données avec la promptVersion et la traçabilité
     const newBot = await prisma.bot.create({
       data: {
         name: botSpec.name,
@@ -32,7 +32,14 @@ export async function POST(req: Request) {
         strategy: botSpec.strategy,
         aiConfig: botSpec.aiConfig,
         status: BotStatus.INACTIVE,
-        promptVersion: botSpec.promptVersion, 
+        promptVersion: botSpec.promptVersion,
+        
+        // Remplissage des nouveaux champs de traçabilité
+        promptText: botSpec.aiConfig.prompt,
+        source: botSpec.aiConfig.source,
+        model: botSpec.aiConfig.model,
+        generatedAt: botSpec.aiConfig.generatedAt ? new Date(botSpec.aiConfig.generatedAt) : null,
+
         user: { 
           connect: { clerkId: userId },
         },
@@ -40,11 +47,22 @@ export async function POST(req: Request) {
     });
 
     log.info('Bot created successfully in DB', { botId: newBot.id, ownerClerkId: userId });
+
+    // 5. Retourner une réponse de succès
     return NextResponse.json(newBot, { status: 201 });
 
   } catch (error) {
     log.error('Failed to create bot', { error });
-    // Fournir une réponse d'erreur générique au client
-    return NextResponse.json({ error: 'An internal error occurred while creating the bot.' }, { status: 500 });
+
+    // Gestion d'erreur améliorée
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Erreur spécifique si l'utilisateur n'est pas trouvé (P2025)
+      if (error.code === 'P2025') {
+        return NextResponse.json({ error: 'User not found in database. Please ensure webhook is working.' }, { status: 404 });
+      }
+    }
+
+    // Erreur générique pour tous les autres cas
+    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
   }
 }

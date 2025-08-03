@@ -1,15 +1,15 @@
-import type { LLMClient, BotSpec } from './llm_client';
+import type { LLMClient, BotSpec } from './llm_client'; // <-- Cet import fonctionne maintenant
 import { log } from '@/lib/logger';
 
 export class MockLLMClient implements LLMClient {
   async generateBotSpec(prompt: string): Promise<BotSpec> {
     log.info('[MockLLM] Received prompt for spec generation.');
-    // Simule un petit délai pour imiter un appel réseau
     await new Promise(resolve => setTimeout(resolve, 50)); 
     
     return {
+      name: 'mock-bot', // Le type BotSpec requiert un nom
       strategy: 'arbitrage_mock',
-      // La propriété 'description' a été retirée pour se conformer à l'interface BotSpec
+      description: 'A mock strategy for testing purposes.', // Le type BotSpec requiert une description
       aiConfig: {
         prompt,
         fallback: true,

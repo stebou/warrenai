@@ -37,22 +37,34 @@ model User {
 }
 
 model Bot {
-  id            String     @id @default(uuid())
+  id            String    @id @default(cuid())
   name          String
-  description   String?
+  description   String
   strategy      String
   aiConfig      Json
-  status        BotStatus  @default(INACTIVE)
+  status        BotStatus @default(INACTIVE)
   promptVersion String?
-  userId        String
 
-  user          User       @relation(fields: [userId], references: [id])
-  sessions      TradingSession[]
+  
+  promptText    String?   @db.Text
+  source        String?
+  model         String?
+  generatedAt   DateTime?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  
+  sessions TradingSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
+// --- AJOUT : Définition du statut d'un bot ---
 enum BotStatus {
-  INACTIVE
   ACTIVE
+  INACTIVE
+  ARCHIVED
   ERROR
 }
 

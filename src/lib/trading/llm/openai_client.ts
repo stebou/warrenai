@@ -1,93 +1,72 @@
-import type { LLMClient, BotSpec } from './llm_client';
-import { log } from '@/lib/logger';
+import OpenAI from 'openai';
 import { env } from '@/lib/env.mjs';
-
-const OPENAI_API_KEY = env.OPENAI_API_KEY;
-
-interface OpenAIMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
+import { log } from '@/lib/logger';
+import type { LLMClient, BotSpec } from './llm_client';
 
 export class OpenAIClient implements LLMClient {
-  private baseUrl = 'https://api.openai.com/v1/chat/completions';
+  private openai: OpenAI;
+
+  constructor() {
+    if (!env.OPENAI_API_KEY) {
+      const errorMessage = 'OpenAI API key is not configured. Please set OPENAI_API_KEY in your environment.';
+      log.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+    this.openai = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+    });
+    log.info('[OpenAIClient] Initialized successfully.');
+  }
 
   private createFallbackSpec(prompt: string, error?: string): BotSpec {
+    log.error('[OpenAIClient] OpenAI call failed, creating fallback spec.', { error });
     return {
+      name: 'fallback-bot',
       strategy: 'default_fallback',
-      description: 'A fallback strategy due to an issue with the LLM.',
-      aiConfig: { 
-        prompt, 
-        fallback: true, 
-        error,
-        source: 'openai_fallback',
-        generatedAt: new Date().toISOString() 
+      description: 'A fallback strategy created due to an AI generation error.',
+      aiConfig: {
+        prompt, // <-- Prompt brut
+        fallback: true,
+        source: 'openai-fallback',
+        error: error || 'Unknown error',
+        generatedAt: new Date().toISOString(), // <-- Timestamp
       },
     };
   }
 
   async generateBotSpec(prompt: string): Promise<BotSpec> {
-    if (!OPENAI_API_KEY) {
-      log.warn('[OpenAIClient] OPENAI_API_KEY missing; falling back to minimal spec');
-      return this.createFallbackSpec(prompt, 'OPENAI_API_KEY is not configured.');
-    }
-
+    log.info('[OpenAIClient] Calling OpenAI API...');
     try {
-      log.info('[OpenAIClient] Calling OpenAI API...');
-      const messages: OpenAIMessage[] = [
-        {
-          role: 'system',
-          content: 'You are a high-performance trading bot spec generator. Respond with a single, minified JSON object containing "strategy" (string), "description" (string), and "aiConfig" (object). Do not include any other text or formatting.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ];
-
-      const res = await fetch(this.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages,
-          temperature: 0.2,
-          max_tokens: 500,
-          response_format: { type: "json_object" },
-        }),
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        log.warn('[OpenAIClient] API error:', { status: res.status, body: text });
-        return this.createFallbackSpec(prompt, text);
+      const content = response.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('OpenAI response content is empty.');
       }
 
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content || typeof content !== 'string') {
-        throw new Error('Invalid content from OpenAI response');
-      }
-
-      const parsedSpec = JSON.parse(content) as BotSpec;
+      log.info('[OpenAIClient] Successfully received and parsed response from OpenAI.');
+      
+      const parsedSpec = JSON.parse(content) as Omit<BotSpec, 'name'>;
       
       return {
+        name: 'ai-generated-bot',
         ...parsedSpec,
         aiConfig: {
           ...parsedSpec.aiConfig,
-          prompt,
+          // --- AJOUTS POUR LA TRAÇABILITÉ ---
+          prompt, // <-- 1. Stocker le prompt brut
           source: 'openai',
-          model: 'gpt-4o-mini',
-          generatedAt: new Date().toISOString(),
+          model: response.model,
+          generatedAt: new Date().toISOString(), // <-- 2. Stocker le timestamp
         },
       };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      log.error('[OpenAIClient] Exception calling OpenAI:', { error: errorMessage });
-      return this.createFallbackSpec(prompt, errorMessage);
+    } catch (error: any) {
+      return this.createFallbackSpec(prompt, error.message);
     }
   }
 }
