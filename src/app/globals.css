@@ -33,3 +33,84 @@
   --color-card: #111827;
   --color-card-foreground: #ffffff;
 }
+
+/* Personnalisation des modales Clerk */
+.cl-rootBox {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+}
+
+.cl-card {
+  position: relative !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  animation: modalSlideIn 0.3s ease-out !important;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cl-headerTitle {
+  font-size: 1.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.cl-formButtonPrimary {
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.3) !important;
+}
+
+.cl-formFieldInput {
+  transition: all 0.2s ease !important;
+  font-size: 1rem !important;
+  padding: 0.75rem !important;
+}
+
+.cl-socialButtonsBlockButton {
+  transition: all 0.2s ease !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.cl-modalBackdrop {
+  animation: backdropFadeIn 0.2s ease-out !important;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Amélioration de l'accessibilité et du style */
+.cl-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cl-card::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.cl-card::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.5);
+  border-radius: 3px;
+}
+
+.cl-card::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.7);
+}
