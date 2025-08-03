@@ -4,36 +4,39 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-export default function Sidebar() {
+export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
-    { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Account', href: '/account' },
-    { name: 'Settings', href: '/settings' }
+    { name: 'Overview', href: '/dashboard' },
+    { name: 'Bots', href: '/dashboard/bots' },
+    { name: 'Analytics', href: '/dashboard/analytics' },
+    { name: 'Portfolio', href: '/dashboard/portfolio' },
+    { name: 'History', href: '/dashboard/history' },
+    { name: 'Settings', href: '/dashboard/settings' }
   ];
 
   return (
     <aside className={`bg-background/20 backdrop-blur-xl border-r border-white/10 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
       <div className="h-full flex flex-col">
-        {/* Logo */}
+        {/* Logo avec dégradé comme la homepage */}
         <div className="h-16 flex items-center px-6 border-b border-white/10">
           {!isCollapsed ? (
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20">
-                <span className="text-primary-foreground font-bold text-sm">T</span>
+                <span className="text-primary-foreground font-bold text-sm">W</span>
               </div>
-              <span className="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TradingAI</span>
+              <span className="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Warren AI</span>
             </div>
           ) : (
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center mx-auto shadow-lg backdrop-blur-sm border border-white/20">
-              <span className="text-primary-foreground font-bold text-sm">T</span>
+              <span className="text-primary-foreground font-bold text-sm">W</span>
             </div>
           )}
         </div>
 
-        {/* Navigation */}
+        {/* Navigation avec style homepage */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
             {menuItems.map((item) => {
@@ -57,7 +60,7 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* Toggle button */}
+        {/* Toggle button avec style homepage */}
         <div className="p-4 border-t border-white/10">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
