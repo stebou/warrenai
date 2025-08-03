@@ -37,11 +37,36 @@
 /* Personnalisation des modales Clerk */
 .cl-rootBox {
   position: fixed !important;
-  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   z-index: 9999 !important;
+  padding: 2rem !important;
+}
+
+/* Masquer les références Clerk en bas */
+.cl-footerActionText,
+.cl-footerActionLink,
+.cl-footer a[href*="clerk"],
+.cl-footerPages,
+.cl-footer .cl-internal-*,
+.cl-modalContent .cl-footer a {
+  display: none !important;
+}
+
+/* Masquer le footer Clerk complètement */
+.cl-footer {
+  display: none !important;
+}
+
+/* S'assurer que les liens externes Clerk sont masqués */
+a[href*="clerk.com"],
+a[href*="clerk.dev"] {
+  display: none !important;
 }
 
 .cl-card {
