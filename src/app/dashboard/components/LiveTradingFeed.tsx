@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 interface Trade {
-  id: number;
+  id: string;
   pair: string;
   type: 'buy' | 'sell';
   amount: string;
@@ -14,10 +14,15 @@ interface Trade {
   bot: string;
 }
 
+// Générateur simple d'id unique (UUID v4 light)
+function generateId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 export default function LiveTradingFeed() {
   const [trades, setTrades] = useState<Trade[]>([
     {
-      id: 1,
+      id: generateId(),
       pair: "BTC/USDT",
       type: "buy",
       amount: "0.0245",
@@ -28,7 +33,7 @@ export default function LiveTradingFeed() {
       bot: "Warren Scalping Pro"
     },
     {
-      id: 2,
+      id: generateId(),
       pair: "ETH/USDT",
       type: "sell",
       amount: "1.2340",
@@ -39,7 +44,7 @@ export default function LiveTradingFeed() {
       bot: "DCA Master"
     },
     {
-      id: 3,
+      id: generateId(),
       pair: "SOL/USDT",
       type: "buy",
       amount: "45.67",
@@ -50,7 +55,7 @@ export default function LiveTradingFeed() {
       bot: "Grid Bot Elite"
     },
     {
-      id: 4,
+      id: generateId(),
       pair: "ADA/USDT",
       type: "sell",
       amount: "2,450.00",
@@ -70,7 +75,7 @@ export default function LiveTradingFeed() {
 
     const interval = setInterval(() => {
       const newTrade: Trade = {
-        id: trades.length + 1,
+        id: generateId(),
         pair: ["BTC/USDT", "ETH/USDT", "SOL/USDT", "ADA/USDT", "DOT/USDT"][Math.floor(Math.random() * 5)],
         type: Math.random() > 0.5 ? "buy" : "sell",
         amount: (Math.random() * 10).toFixed(4),
@@ -81,11 +86,15 @@ export default function LiveTradingFeed() {
         bot: ["Warren Scalping Pro", "DCA Master", "Grid Bot Elite", "Swing Trader AI"][Math.floor(Math.random() * 4)]
       };
 
-      setTrades(prev => [newTrade, ...prev.slice(0, 9)]); // Garde seulement les 10 derniers
-    }, 10000); // Nouveau trade toutes les 10 secondes
+      setTrades(prev => {
+        // Vérifie l'unicité de l'id avant d'ajouter
+        if (prev.some(t => t.id === newTrade.id)) return prev;
+        return [newTrade, ...prev.slice(0, 9)];
+      });
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [isLive, trades.length]);
+  }, [isLive]);
 
   const getTypeColor = (type: string) => {
     return type === 'buy' ? 'text-primary bg-primary/10 border-primary/30' : 'text-secondary bg-secondary/10 border-secondary/30';
@@ -128,7 +137,7 @@ export default function LiveTradingFeed() {
       </div>
 
       <div className="space-y-2 max-h-80 overflow-y-auto">
-        {trades.map((trade, index) => (
+        {trades.map((trade) => (
           <div
             key={trade.id}
             className="backdrop-blur-sm bg-white/5 border border-white/10 rounded-xl p-3 hover:bg-white/10 transition-all duration-300 group/trade"

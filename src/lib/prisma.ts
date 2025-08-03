@@ -1,14 +1,16 @@
-// src/lib/prisma.ts
-import { PrismaClient } from '@prisma/client';
+// Prisma Client singleton pattern for Next.js 15
+import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+  prisma: PrismaClient | undefined
+}
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ['query'], // désactive si tu veux moins de logs
-  });
+    log: process.env.NODE_ENV === 'development' ? ['query', 'warn', 'error'] : ['error'],
+  })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+export default prisma

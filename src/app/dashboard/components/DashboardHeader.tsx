@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton, useUser } from '@clerk/nextjs';
-import ThemeToggle from '@/components/ThemeToggle';
+import DashboardThemeToggle from './DashboardThemeToggle';
 
 export default function DashboardHeader() {
   const { user } = useUser();
@@ -37,7 +37,7 @@ export default function DashboardHeader() {
 
         {/* Controls */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
+          <DashboardThemeToggle />
           
           {/* Notifications avec style homepage */}
           <button className="relative p-2 text-muted-foreground hover:text-primary transition-colors backdrop-blur-sm hover:bg-white/10 rounded-lg border border-transparent hover:border-white/20">

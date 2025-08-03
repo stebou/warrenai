@@ -1,7 +1,7 @@
 // src/app/api/webhooks/user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { Webhook } from 'svix';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 interface ClerkUserPayload {
   id: string;

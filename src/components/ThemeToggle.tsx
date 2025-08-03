@@ -1,29 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [localIsDark, setLocalIsDark] = useState(false);
+  
+  // Tentative d'utilisation du contexte
+  let contextTheme = null;
+  try {
+    contextTheme = useTheme();
+  } catch (error) {
+    // Le contexte n'est pas encore disponible
+  }
 
   useEffect(() => {
+    setMounted(true);
+    // Initialiser le thème local depuis localStorage en attendant l'hydratation
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    setIsDark(shouldBeDark);
-    document.documentElement.classList.toggle('dark', shouldBeDark);
+    setLocalIsDark(shouldBeDark);
   }, []);
 
-  const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList.toggle('dark', newIsDark);
-    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
+  const handleToggle = () => {
+    if (contextTheme) {
+      // Utiliser le contexte si disponible
+      contextTheme.toggleTheme();
+    } else {
+      // Fallback local
+      const newIsDark = !localIsDark;
+      setLocalIsDark(newIsDark);
+      document.documentElement.classList.toggle('dark', newIsDark);
+      localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
+    }
   };
+
+  // Utiliser le contexte si disponible, sinon le state local
+  const isDark = contextTheme ? contextTheme.isDark : localIsDark;
+
+  if (!mounted) {
+    return (
+      <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+        <div className="w-5 h-5" />
+      </button>
+    );
+  }
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleToggle}
       className="p-2 text-muted-foreground hover:text-foreground transition-colors"
       aria-label="Basculer le thème"
     >

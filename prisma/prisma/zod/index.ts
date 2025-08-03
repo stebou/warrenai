@@ -58,7 +58,7 @@ export const TransactionIsolationLevelSchema = z.enum(['ReadUncommitted','ReadCo
 
 export const UserScalarFieldEnumSchema = z.enum(['id','clerkId','email','firstName','lastName','imageUrl','externalId','createdAt']);
 
-export const BotScalarFieldEnumSchema = z.enum(['id','name','description','strategy','aiConfig','status','userId']);
+export const BotScalarFieldEnumSchema = z.enum(['id','name','description','strategy','aiConfig','status','promptVersion','userId']);
 
 export const TradingSessionScalarFieldEnumSchema = z.enum(['id','botId','startedAt','endedAt','performance','log']);
 
@@ -112,6 +112,7 @@ export const BotSchema = z.object({
   description: z.string().nullable(),
   strategy: z.string(),
   aiConfig: JsonValueSchema,
+  promptVersion: z.string().nullable(),
   userId: z.string(),
 })
 

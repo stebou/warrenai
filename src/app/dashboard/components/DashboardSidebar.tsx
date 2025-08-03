@@ -11,12 +11,17 @@ import {
   History, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  User
 } from 'lucide-react';
+import { useUser, useClerk } from '@clerk/nextjs';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   const menuItems = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -71,8 +76,49 @@ export default function DashboardSidebar() {
           </div>
         </nav>
 
-        {/* Toggle button avec icônes Lucide */}
-        <div className="p-4 border-t border-white/10">
+        {/* User Profile & Logout */}
+        <div className="p-4 border-t border-white/10 space-y-2">
+          {/* User Info */}
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-3'} py-2`}>
+            {!isCollapsed ? (
+              <div className="flex items-center gap-3 w-full">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+                  {user?.imageUrl ? (
+                    <img src={user.imageUrl} alt={user.firstName || 'User'} className="w-8 h-8 rounded-full" />
+                  ) : (
+                    <User className="w-4 h-4 text-primary-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user?.firstName || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.emailAddresses[0]?.emailAddress}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt={user.firstName || 'User'} className="w-8 h-8 rounded-full" />
+                ) : (
+                  <User className="w-4 h-4 text-primary-foreground" />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={() => signOut()}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-400 hover:text-red-300 hover:bg-red-500/10 backdrop-blur-sm border border-transparent hover:border-red-500/20`}
+          >
+            <LogOut className={`w-4 h-4 ${isCollapsed ? '' : 'mr-3'}`} />
+            {!isCollapsed && <span>Déconnexion</span>}
+          </button>
+
+          {/* Toggle button */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-primary transition-all duration-300 backdrop-blur-sm hover:bg-white/10 rounded-lg border border-transparent hover:border-white/20 group"
