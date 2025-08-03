@@ -137,10 +137,11 @@ Tip: Need your database queries to be 1000x faster? Accelerate offers you that a
  ✓ Compiled in 105ms (781 modules)
  ✓ Compiled in 140ms (781 modules)
  ✓ Compiled in 118ms (781 modules)
-rom /Users/sf/Documents/testing/trading-v1/src/components/ThemeProvider.tsx
-    1: No such file or directory (os error 2)
-
-Import trace for requested module:
+ ✓ Compiled in 344ms (781 modules)
+ ✓ Compiled in 176ms (781 modules)
+ ✓ Compiled in 462ms (781 modules)
+ ✓ Compiled in 245ms (781 modules)
+d module:
 ./src/components/ThemeProvider.tsx
  ⨯ ./src/components/ThemeProvider.tsx
 Error: 
@@ -579,3 +580,7 @@ Import trace for requested module:
  ✓ Compiled in 92ms (347 modules)
  ✓ Compiled in 105ms (347 modules)
  ✓ Compiled in 111ms (347 modules)
+ ✓ Compiled in 360ms (347 modules)
+ ✓ Compiled in 151ms (347 modules)
+ ✓ Compiled in 329ms (347 modules)
+ ✓ Compiled in 171ms (347 modules)

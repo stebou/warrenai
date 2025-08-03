@@ -3,18 +3,28 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  Bot, 
+  BarChart3, 
+  Briefcase, 
+  History, 
+  Settings,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
-    { name: 'Overview', href: '/dashboard' },
-    { name: 'Bots', href: '/dashboard/bots' },
-    { name: 'Analytics', href: '/dashboard/analytics' },
-    { name: 'Portfolio', href: '/dashboard/portfolio' },
-    { name: 'History', href: '/dashboard/history' },
-    { name: 'Settings', href: '/dashboard/settings' }
+    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Bots', href: '/dashboard/bots', icon: Bot },
+    { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    { name: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase },
+    { name: 'History', href: '/dashboard/history', icon: History },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings }
   ];
 
   return (
@@ -36,11 +46,12 @@ export default function DashboardSidebar() {
           )}
         </div>
 
-        {/* Navigation avec style homepage */}
+        {/* Navigation avec icônes Lucide */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
+              const IconComponent = item.icon;
               
               return (
                 <Link
@@ -52,21 +63,25 @@ export default function DashboardSidebar() {
                       : 'text-foreground hover:text-primary hover:bg-white/10 backdrop-blur-sm border border-transparent hover:border-white/20'
                   }`}
                 >
+                  <IconComponent className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} transition-transform duration-300 ${isActive ? '' : 'group-hover:scale-110'}`} />
                   {!isCollapsed && <span>{item.name}</span>}
-                  {isCollapsed && <span className="mx-auto">{item.name[0]}</span>}
                 </Link>
               );
             })}
           </div>
         </nav>
 
-        {/* Toggle button avec style homepage */}
+        {/* Toggle button avec icônes Lucide */}
         <div className="p-4 border-t border-white/10">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-primary transition-colors backdrop-blur-sm hover:bg-white/10 rounded-lg border border-transparent hover:border-white/20"
+            className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-primary transition-all duration-300 backdrop-blur-sm hover:bg-white/10 rounded-lg border border-transparent hover:border-white/20 group"
           >
-            <span className="text-sm">{isCollapsed ? '→' : '←'}</span>
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+            )}
           </button>
         </div>
       </div>
