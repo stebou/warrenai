@@ -156,19 +156,11 @@ Tip: Need your database queries to be 1000x faster? Accelerate offers you that a
  ✓ Compiled in 456ms (781 modules)
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/sf/Documents/testing/trading-v1/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/sf/Documents/testing/trading-v1/.next/cache/webpack/client-development/0.pack.gz'
  ✓ Compiled in 340ms (781 modules)
-m /Users/sf/Documents/testing/trading-v1/src/components/ThemeProvider.tsx
-    1: No such file or directory (os error 2)
-
-Import trace for requested module:
-./src/components/ThemeProvider.tsx
- ⨯ ./src/components/ThemeProvider.tsx
-Error: 
-
-Caused by:
-    0: Failed to read source code from /Users/sf/Documents/testing/trading-v1/src/components/ThemeProvider.tsx
-    1: No such file or directory (os error 2)
-
-Import trace for requested module:
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/sf/Documents/testing/trading-v1/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/sf/Documents/testing/trading-v1/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 629ms (781 modules)
+ ✓ Compiled in 630ms (781 modules)
+ ✓ Compiled in 579ms (781 modules)
+port trace for requested module:
 ./src/components/ThemeProvider.tsx
  ⨯ ./src/components/ThemeProvider.tsx
 Error: 
@@ -549,3 +541,6 @@ Import trace for requested module:
  ✓ Compiled in 94ms (347 modules)
  ✓ Compiled in 385ms (347 modules)
  ✓ Compiled in 274ms (347 modules)
+ ✓ Compiled in 571ms (347 modules)
+ ✓ Compiled in 501ms (347 modules)
+ ✓ Compiled in 517ms (347 modules)
