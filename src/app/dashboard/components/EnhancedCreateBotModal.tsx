@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 import ExchangeSelector, { type ExchangeOption } from '@/components/bot/ExchangeSelector';
 import BinanceConnectionModal from '@/components/bot/BinanceConnectionModal';
+import CoinbaseConnectionModal from '@/components/bot/CoinbaseConnectionModal';
 import CryptoPairPicker, { type CryptoPair } from '@/components/bot/CryptoPairPicker';
-import BinanceLogo from '@/components/icons/BinanceLogo';
 
 interface EnhancedCreateBotModalProps {
   open: boolean;
@@ -41,7 +41,9 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
   const [selectedExchange, setSelectedExchange] = useState<ExchangeOption | null>(null);
   const [selectedPair, setSelectedPair] = useState<CryptoPair | null>(null);
   const [showBinanceModal, setShowBinanceModal] = useState(false);
+  const [showCoinbaseModal, setShowCoinbaseModal] = useState(false);
   const [binanceCredentials, setBinanceCredentials] = useState<{ apiKey: string; apiSecret: string; isTestnet: boolean } | null>(null);
+  const [coinbaseCredentials, setCoinbaseCredentials] = useState<{ connected: boolean } | null>(null);
   const [existingCredentials, setExistingCredentials] = useState<any>(null);
   const [isCheckingCredentials, setIsCheckingCredentials] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -242,15 +244,34 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
     nextStep();
   };
 
+  const handleCoinbaseConnection = () => {
+    setCoinbaseCredentials({ connected: true });
+    setShowCoinbaseModal(false);
+    nextStep();
+  };
+
   const handleExchangeContinue = () => {
-    console.log('Exchange continue clicked. Selected exchange:', selectedExchange?.name, 'has credentials:', !!binanceCredentials, 'existing:', !!existingCredentials);
-    if (selectedExchange?.requiresAuth && (selectedExchange.type === 'binance' || selectedExchange.type === 'binance_futures')) {
-      if (!binanceCredentials && !existingCredentials) {
-        console.log('No Binance credentials found, opening modal');
-        setShowBinanceModal(true);
-        return;
+    console.log('Exchange continue clicked. Selected exchange:', selectedExchange?.name, 'Type:', selectedExchange?.type);
+    
+    if (selectedExchange?.requiresAuth) {
+      // Gérer Binance
+      if (selectedExchange.type === 'binance' || selectedExchange.type === 'binance_futures') {
+        if (!binanceCredentials && !existingCredentials) {
+          console.log('No Binance credentials found, opening modal');
+          setShowBinanceModal(true);
+          return;
+        }
+      }
+      // Gérer Coinbase
+      else if (selectedExchange.type === 'coinbase') {
+        if (!coinbaseCredentials) {
+          console.log('No Coinbase credentials found, opening modal');
+          setShowCoinbaseModal(true);
+          return;
+        }
       }
     }
+    
     console.log('Proceeding to next step');
     nextStep();
   };
@@ -1046,6 +1067,14 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
             }}
             onSuccess={handleBinanceConnection}
             isTestnet={selectedExchange?.environment === 'testnet'}
+          />
+          <CoinbaseConnectionModal
+            open={showCoinbaseModal}
+            onOpenChange={(open) => {
+              console.log('Coinbase modal state changed:', open);
+              setShowCoinbaseModal(open);
+            }}
+            onSuccess={handleCoinbaseConnection}
           />
         </>,
         document.body

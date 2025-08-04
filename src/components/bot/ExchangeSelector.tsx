@@ -9,13 +9,14 @@ import {
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
-import BinanceLogo from '@/components/icons/BinanceLogo';
+import { SiBinance, SiCoinbase } from 'react-icons/si';
+import { TbBrandBinance } from 'react-icons/tb';
 
 export interface ExchangeOption {
   id: string;
   name: string;
-  type: 'binance' | 'binance_futures';
-  environment: 'testnet' | 'mainnet';
+  type: 'binance' | 'binance_futures' | 'coinbase';
+  environment: 'testnet' | 'mainnet' | 'sandbox';
   description: string;
   features: string[];
   requiresAuth: boolean;
@@ -37,7 +38,7 @@ const exchangeOptions: ExchangeOption[] = [
     description: 'Environnement de test officiel Binance avec faux fonds',
     features: ['API Binance réelle', 'Fonds de test gratuits', 'Comportement identique au mainnet', 'Sécurisé'],
     requiresAuth: true,
-    icon: <BinanceLogo className="w-6 h-6 text-yellow-500" variant="testnet" />,
+    icon: <TbBrandBinance className="w-6 h-6 text-yellow-500" />,
     badge: {
       text: 'Test réel',
       color: 'bg-yellow-500'
@@ -53,13 +54,29 @@ const exchangeOptions: ExchangeOption[] = [
     description: 'Trading en direct avec de vrais fonds sur Binance',
     features: ['Vrais profits/pertes', 'Liquidité maximale', 'Toutes les cryptomonnaies', 'Trading professionnel'],
     requiresAuth: true,
-    icon: <BinanceLogo className="w-6 h-6 text-[#F0B90B]" variant="mainnet" />,
+    icon: <SiBinance className="w-6 h-6 text-[#F0B90B]" />,
     badge: {
       text: 'Production',
       color: 'bg-red-500'
     },
     pros: ['Vrais profits', 'Liquidité maximale', 'Accès complet'],
     cons: ['Risque financier', 'Configuration avancée requise']
+  },
+  {
+    id: 'coinbase_sandbox',
+    name: 'Coinbase Sandbox',
+    type: 'coinbase',
+    environment: 'sandbox',
+    description: 'Environnement de test Coinbase avec authentification OAuth2 sécurisée',
+    features: ['OAuth2 sécurisé', 'Données de test réelles', 'API officielle Coinbase', 'Comptes simulés'],
+    requiresAuth: true,
+    icon: <SiCoinbase className="w-6 h-6 text-blue-500" />,
+    badge: {
+      text: 'OAuth2',
+      color: 'bg-blue-500'
+    },
+    pros: ['Authentification sécurisée', 'Pas de clés API', 'Interface utilisateur intuitive'],
+    cons: ['Configuration OAuth2', 'Endpoints limités en sandbox']
   }
 ];
 

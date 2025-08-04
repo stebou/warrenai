@@ -66,7 +66,7 @@ export const BotStatsScalarFieldEnumSchema = z.enum(['id','botId','startedAt','l
 
 export const SubscriptionScalarFieldEnumSchema = z.enum(['id','userId','stripeId','priceId','status','createdAt']);
 
-export const ExchangeCredentialsScalarFieldEnumSchema = z.enum(['id','userId','exchange','apiKey','apiSecret','isTestnet','isActive','label','createdAt','updatedAt','lastUsed']);
+export const ExchangeCredentialsScalarFieldEnumSchema = z.enum(['id','userId','exchange','apiKey','apiSecret','passphrase','accessToken','refreshToken','expiresAt','isTestnet','isActive','label','createdAt','updatedAt','lastUsed']);
 
 export const SortOrderSchema = z.enum(['asc','desc']);
 
@@ -84,7 +84,7 @@ export const BotStatusSchema = z.enum(['ACTIVE','INACTIVE','ARCHIVED','ERROR']);
 
 export type BotStatusType = `${z.infer<typeof BotStatusSchema>}`
 
-export const ExchangeTypeSchema = z.enum(['BINANCE','BINANCE_FUTURES']);
+export const ExchangeTypeSchema = z.enum(['BINANCE','BINANCE_FUTURES','COINBASE']);
 
 export type ExchangeTypeType = `${z.infer<typeof ExchangeTypeSchema>}`
 
@@ -191,8 +191,12 @@ export const ExchangeCredentialsSchema = z.object({
   exchange: ExchangeTypeSchema,
   id: z.string().uuid(),
   userId: z.string(),
-  apiKey: z.string(),
-  apiSecret: z.string(),
+  apiKey: z.string().nullable(),
+  apiSecret: z.string().nullable(),
+  passphrase: z.string().nullable(),
+  accessToken: z.string().nullable(),
+  refreshToken: z.string().nullable(),
+  expiresAt: z.coerce.date().nullable(),
   isTestnet: z.boolean(),
   isActive: z.boolean(),
   label: z.string().nullable(),

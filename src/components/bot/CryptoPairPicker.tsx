@@ -33,7 +33,7 @@ interface CryptoPairPickerProps {
   selectedPair: string | null;
   onPairSelect: (pair: CryptoPair) => void;
   onContinue: () => void;
-  exchangeType?: 'binance' | 'binance_futures';
+  exchangeType?: 'binance' | 'binance_futures' | 'coinbase';
   disabled?: boolean;
 }
 

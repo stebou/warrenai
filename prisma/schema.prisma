@@ -112,13 +112,22 @@ model Subscription {
   user         User     @relation(fields: [userId], references: [id])
 }
 
-// Modèle pour stocker les clés API des exchanges (Binance, etc.)
+// Modèle pour stocker les clés API des exchanges (Binance, etc.) et tokens OAuth2 (Coinbase, etc.)
 model ExchangeCredentials {
   id           String      @id @default(uuid())
   userId       String
   exchange     ExchangeType
-  apiKey       String      // Clé API (en clair pour l'instant, chiffrement à implémenter)
-  apiSecret    String      // Secret API (en clair pour l'instant, chiffrement à implémenter)
+  
+  // Champs pour authentification API Key (Binance)
+  apiKey       String?     // Clé API (en clair pour l'instant, chiffrement à implémenter)
+  apiSecret    String?     // Secret API (en clair pour l'instant, chiffrement à implémenter)
+  passphrase   String?     // Passphrase pour certains exchanges
+  
+  // Champs pour authentification OAuth2 (Coinbase)
+  accessToken  String?     // Token d'accès OAuth2
+  refreshToken String?     // Token de rafraîchissement OAuth2
+  expiresAt    DateTime?   // Date d'expiration du token d'accès
+  
   isTestnet    Boolean     @default(true)
   isActive     Boolean     @default(true)
   label        String?     // Label personnalisé pour identifier les clés
@@ -128,13 +137,14 @@ model ExchangeCredentials {
 
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, exchange, isTestnet]) // Un seul ensemble de clés par exchange et environnement par utilisateur
+  @@unique([userId, exchange]) // Un seul ensemble de credentials par exchange par utilisateur
   @@map("exchange_credentials")
 }
 
 enum ExchangeType {
   BINANCE
   BINANCE_FUTURES
+  COINBASE
   // Futurs exchanges à ajouter
 }
 
