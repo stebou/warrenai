@@ -13,7 +13,7 @@ async function testCoinbaseAdvanced() {
   const config = {
     apiKey: process.env.COINBASE_ADVANCED_API_KEY || 'your-api-key',
     apiSecret: process.env.COINBASE_ADVANCED_API_SECRET || 'your-api-secret',
-    sandbox: false // Mode production avec vraies clés
+    sandbox: false // Test en production avec clé CDP
   };
 
   console.log('📋 Configuration:');

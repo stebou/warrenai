@@ -43,7 +43,7 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
   const [showBinanceModal, setShowBinanceModal] = useState(false);
   const [showCoinbaseModal, setShowCoinbaseModal] = useState(false);
   const [binanceCredentials, setBinanceCredentials] = useState<{ apiKey: string; apiSecret: string; isTestnet: boolean } | null>(null);
-  const [coinbaseCredentials, setCoinbaseCredentials] = useState<{ connected: boolean } | null>(null);
+  const [coinbaseCredentials, setCoinbaseCredentials] = useState<{ apiKeyName: string; privateKey: string } | null>(null);
   const [existingCredentials, setExistingCredentials] = useState<any>(null);
   const [isCheckingCredentials, setIsCheckingCredentials] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -244,8 +244,8 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
     nextStep();
   };
 
-  const handleCoinbaseConnection = () => {
-    setCoinbaseCredentials({ connected: true });
+  const handleCoinbaseConnection = (credentials: { apiKeyName: string; privateKey: string }) => {
+    setCoinbaseCredentials(credentials);
     setShowCoinbaseModal(false);
     nextStep();
   };
@@ -1069,10 +1069,10 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
             isTestnet={selectedExchange?.environment === 'testnet'}
           />
           <CoinbaseConnectionModal
-            open={showCoinbaseModal}
-            onOpenChange={(open) => {
-              console.log('Coinbase modal state changed:', open);
-              setShowCoinbaseModal(open);
+            isOpen={showCoinbaseModal}
+            onClose={() => {
+              console.log('Coinbase modal closed');
+              setShowCoinbaseModal(false);
             }}
             onSuccess={handleCoinbaseConnection}
           />

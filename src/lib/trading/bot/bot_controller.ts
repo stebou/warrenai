@@ -43,6 +43,8 @@ export class BotController {
   // Configuration pour l'exchange à utiliser
   private readonly USE_BINANCE = process.env.USE_BINANCE_EXCHANGE === 'true';
   private readonly USE_TESTNET = process.env.BINANCE_USE_TESTNET !== 'false'; // true par défaut
+  private readonly USE_COINBASE = process.env.USE_COINBASE_EXCHANGE === 'true';
+  private readonly DEFAULT_EXCHANGE = process.env.DEFAULT_EXCHANGE || 'coinbase-official';
 
   private constructor() {
     log.info('[BotController] Initialized');
@@ -109,8 +111,9 @@ export class BotController {
         currentActiveBots: this.activeBots.size 
       });
 
-      // Créer la connexion exchange - toujours utiliser Binance maintenant
-      const exchange = await ExchangeFactory.createForUser(bot.userId, 'binance', this.USE_TESTNET);
+      // Créer la connexion exchange - utiliser l'exchange configuré dans le bot ou celui par défaut
+      const exchangeType = this.getExchangeType(bot);
+      const exchange = await this.createExchangeForBot(bot, exchangeType);
 
       // Extraire la configuration du bot
       const config = this.extractBotConfig(bot);
@@ -356,16 +359,20 @@ export class BotController {
 
   private async analyzeMarket(exchange: BaseExchange, symbol: string, config: any): Promise<TradingSignal> {
     try {
+      // Convertir le symbole au format de l'exchange
+      const exchangeSymbol = this.convertSymbolForExchange(symbol, config.exchange);
+      
       // Récupérer les données de marché
-      const ticker = await exchange.getTicker(symbol);
-      const candles = await exchange.getCandles(symbol, '1h', 20);
-      const orderBook = await exchange.getOrderBook(symbol, 10);
+      const ticker = await exchange.getTicker(exchangeSymbol);
+      const candles = await exchange.getCandles(exchangeSymbol, '1h', 20);
+      const orderBook = await exchange.getOrderBook(exchangeSymbol, 10);
 
       // Analyse technique simple basée sur la stratégie
       const signal = this.generateTradingSignal(ticker, candles, orderBook, config);
       
       log.info('[BotController] Market analysis completed', {
-        symbol,
+        originalSymbol: symbol,
+        exchangeSymbol,
         price: ticker.price,
         signal: signal.action,
         confidence: signal.confidence,
@@ -916,6 +923,99 @@ export class BotController {
       default:
         return ['RSI', 'MACD'];
     }
+  }
+
+  /**
+   * Détermine le type d'exchange à utiliser pour un bot
+   */
+  private getExchangeType(bot: Bot): 'binance' | 'coinbase-official' {
+    try {
+      const aiConfig = bot.aiConfig as any;
+      const originalConfig = aiConfig?.originalConfig;
+      
+      // Vérifier si l'exchange est spécifié dans la config du bot
+      const botExchange = originalConfig?.selectedExchange || originalConfig?.exchange;
+      
+      if (botExchange === 'coinbase' || botExchange === 'coinbase-official') {
+        return 'coinbase-official';
+      } else if (botExchange === 'binance') {
+        return 'binance';
+      }
+      
+      // Utiliser l'exchange par défaut configuré
+      return this.DEFAULT_EXCHANGE as 'binance' | 'coinbase-official';
+      
+    } catch (error) {
+      log.warn('[BotController] Failed to determine exchange type, using default', {
+        botId: bot.id,
+        error: error instanceof Error ? error.message : String(error),
+        defaultExchange: this.DEFAULT_EXCHANGE
+      });
+      
+      return this.DEFAULT_EXCHANGE as 'binance' | 'coinbase-official';
+    }
+  }
+
+  /**
+   * Crée une connexion exchange pour un bot spécifique
+   */
+  private async createExchangeForBot(bot: Bot, exchangeType: 'binance' | 'coinbase-official'): Promise<BaseExchange> {
+    if (exchangeType === 'coinbase-official') {
+      // Utiliser les clés Coinbase des variables d'environnement
+      return await ExchangeFactory.create({
+        type: 'coinbase-official',
+        apiKey: process.env.COINBASE_ADVANCED_API_KEY || '',
+        apiSecret: process.env.COINBASE_ADVANCED_API_SECRET || '',
+        sandbox: false
+      });
+    } else {
+      // Utiliser Binance avec les clés utilisateur
+      return await ExchangeFactory.createForUser(bot.userId, 'binance', this.USE_TESTNET);
+    }
+  }
+
+  /**
+   * Convertit un symbole au format de l'exchange approprié
+   */
+  private convertSymbolForExchange(symbol: string, exchange: string): string {
+    if (exchange === 'coinbase-official' || exchange === 'coinbase') {
+      // Convertir de Binance format (BTCUSDT) vers Coinbase format (BTC-USD)
+      const symbolMap: { [key: string]: string } = {
+        'BTCUSDT': 'BTC-USD',
+        'BTC/USDT': 'BTC-USD',
+        'ETHUSDT': 'ETH-USD',
+        'ETH/USDT': 'ETH-USD',
+        'ADAUSDT': 'ADA-USD',
+        'ADA/USDT': 'ADA-USD',
+        'SOLUSDT': 'SOL-USD',
+        'SOL/USDT': 'SOL-USD',
+        'DOTUSDT': 'DOT-USD',
+        'DOT/USDT': 'DOT-USD'
+      };
+      
+      if (symbolMap[symbol]) {
+        return symbolMap[symbol];
+      }
+      
+      // Conversion générique
+      if (symbol.includes('USDT')) {
+        const base = symbol.replace('USDT', '').replace('/', '');
+        return `${base}-USD`;
+      } else if (symbol.includes('/USDT')) {
+        const base = symbol.replace('/USDT', '');
+        return `${base}-USD`;
+      }
+      
+      // Si déjà au format Coinbase
+      if (symbol.includes('-')) {
+        return symbol;
+      }
+      
+      return `${symbol}-USD`;
+    }
+    
+    // Pour Binance, garder le format original
+    return symbol;
   }
 
   getStats(): {

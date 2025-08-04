@@ -1,193 +1,437 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
+  X, 
   ExternalLink, 
+  Key, 
   Shield, 
   CheckCircle2, 
-  X,
-  Lock,
-  Globe,
-  Zap
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  Building2
 } from 'lucide-react';
 import { SiCoinbase } from 'react-icons/si';
 
 interface CoinbaseConnectionModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: (credentials: { apiKeyName: string; privateKey: string }) => void;
 }
 
-export default function CoinbaseConnectionModal({
-  open,
-  onOpenChange,
+type Step = 'intro' | 'guide' | 'form' | 'testing' | 'success';
+
+export default function CoinbaseConnectionModal({ 
+  isOpen, 
+  onClose, 
   onSuccess
 }: CoinbaseConnectionModalProps) {
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [currentStep, setCurrentStep] = useState<Step>('intro');
+  const [apiKeyName, setApiKeyName] = useState('');
+  const [privateKey, setPrivateKey] = useState('');
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleConnect = async () => {
-    setIsConnecting(true);
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      console.log('CoinbaseConnectionModal opened');
+      setCurrentStep('intro');
+      setApiKeyName('');
+      setPrivateKey('');
+      setShowPrivateKey(false);
+      setError(null);
+    } else {
+      console.log('CoinbaseConnectionModal closed');
+    }
+  }, [isOpen]);
+
+  const coinbaseUrl = 'https://www.coinbase.com/developer-platform';
+
+  const handleOpenCoinbase = () => {
+    window.open(coinbaseUrl, '_blank');
+    setCurrentStep('form');
+  };
+
+  const handleTestConnection = async () => {
+    if (!apiKeyName.trim() || !privateKey.trim()) {
+      setError('Veuillez remplir tous les champs');
+      return;
+    }
+
+    // Vérifier le format de l'API Key Name
+    if (!apiKeyName.includes('organizations/') || !apiKeyName.includes('/apiKeys/')) {
+      setError('Format d\'API Key Name invalide. Doit être: organizations/{org_id}/apiKeys/{key_id}');
+      return;
+    }
+
+    // Vérifier le format de la clé privée
+    if (!privateKey.includes('-----BEGIN EC PRIVATE KEY-----') || !privateKey.includes('-----END EC PRIVATE KEY-----')) {
+      setError('Format de clé privée invalide. Doit être une clé ECDSA au format PEM.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
     try {
-      // Rediriger vers l'OAuth Coinbase
-      window.location.href = '/api/auth/coinbase';
-    } catch (error) {
-      console.error('Error initiating Coinbase OAuth:', error);
-      setIsConnecting(false);
+      // Sauvegarder les credentials via notre API
+      const response = await fetch('/api/exchange/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          exchange: 'COINBASE',
+          apiKey: apiKeyName.trim(),
+          apiSecret: privateKey.trim(),
+          isTestnet: false,
+          label: 'Coinbase Advanced Trade'
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setCurrentStep('success');
+        setTimeout(() => {
+          onSuccess({
+            apiKeyName: apiKeyName.trim(),
+            privateKey: privateKey.trim()
+          });
+        }, 1500);
+      } else if (response.status === 409) {
+        // Credentials existent déjà - on peut continuer normalement
+        console.log('Credentials already exist, proceeding...');
+        setCurrentStep('success');
+        setTimeout(() => {
+          onSuccess({
+            apiKeyName: apiKeyName.trim(),
+            privateKey: privateKey.trim()
+          });
+        }, 1500);
+      } else {
+        setError(result.error || 'Erreur lors de la sauvegarde des clés CDP.');
+      }
+    } catch (err) {
+      setError('Erreur de connexion. Réessayez dans quelques instants.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const steps = {
+    intro: (
+      <div className="text-center space-y-6">
+        <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center">
+          <SiCoinbase className="w-8 h-8 text-blue-500" />
+        </div>
+        
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-gray-100">
+            Connecter votre compte Coinbase
+          </h3>
+          <p className="text-gray-400 max-w-md mx-auto">
+            Connectez votre compte Coinbase via l'Advanced Trade API pour permettre à votre bot de trader en votre nom.
+          </p>
+        </div>
+
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 space-y-3">
+          <div className="flex items-center space-x-2 text-blue-400">
+            <Shield className="w-5 h-5" />
+            <span className="font-medium">Sécurité garantie</span>
+          </div>
+          <ul className="text-sm text-gray-300 space-y-1 text-left">
+            <li>• Vos clés CDP sont chiffrées et stockées de manière sécurisée</li>
+            <li>• Utilise l'authentification JWT ES256 la plus sécurisée</li>
+            <li>• Vous pouvez révoquer l'accès à tout moment sur Coinbase</li>
+            <li>• Accès complet à l'Advanced Trade API</li>
+          </ul>
+        </div>
+
+        <div className="flex flex-col space-y-3">
+          <button
+            onClick={() => setCurrentStep('guide')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+          >
+            <span>Continuer</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-300 text-sm transition-colors duration-200"
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    ),
+
+    guide: (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-bold text-gray-100">
+            Créer vos clés CDP Coinbase
+          </h3>
+          <p className="text-gray-400">
+            Suivez ces étapes pour créer vos clés Cloud Developer Platform
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {[
+            {
+              step: 1,
+              title: 'Ouvrir Coinbase Developer Platform',
+              description: 'Connectez-vous sur coinbase.com/developer-platform'
+            },
+            {
+              step: 2,
+              title: 'Créer un nouveau projet',
+              description: 'Si ce n\'est pas fait, créez un projet pour votre bot'
+            },
+            {
+              step: 3,
+              title: 'Générer des clés CDP',
+              description: 'Dans votre projet, allez dans API Keys → Create Key'
+            },
+            {
+              step: 4,
+              title: 'Configurer les permissions',
+              description: 'Sélectionnez "Advanced Trade" et toutes les permissions nécessaires'
+            },
+            {
+              step: 5,
+              title: 'Télécharger les clés',
+              description: 'Téléchargez le fichier JSON avec vos clés CDP'
+            },
+            {
+              step: 6,
+              title: 'Copier les informations',
+              description: 'Copiez l\'API Key Name et la Private Key du fichier JSON'
+            }
+          ].map((item) => (
+            <div key={item.step} className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {item.step}
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-100">{item.title}</h4>
+                <p className="text-sm text-gray-400">{item.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+          <div className="flex items-start space-x-2 text-yellow-400">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <strong>Important :</strong> Les clés CDP sont différentes des clés API classiques. 
+              Elles utilisent l'authentification JWT ES256 pour une sécurité maximale.
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col space-y-3">
+          <button
+            onClick={handleOpenCoinbase}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span>Ouvrir Coinbase Developer Platform</span>
+          </button>
+          
+          <button
+            onClick={() => setCurrentStep('form')}
+            className="text-blue-400 hover:text-blue-300 text-sm transition-colors duration-200"
+          >
+            J'ai déjà mes clés CDP
+          </button>
+        </div>
+      </div>
+    ),
+
+    form: (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-bold text-gray-100">
+            Entrer vos clés CDP
+          </h3>
+          <p className="text-gray-400">
+            Collez les informations de votre fichier de clés CDP
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              API Key Name
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={apiKeyName}
+                onChange={(e) => setApiKeyName(e.target.value)}
+                placeholder="organizations/{org_id}/apiKeys/{key_id}"
+                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 pr-10 text-xs"
+              />
+              <Key className="absolute right-3 top-3.5 w-4 h-4 text-gray-500" />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Format: organizations/votre-org-id/apiKeys/votre-key-id
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Private Key (ECDSA PEM)
+            </label>
+            <div className="relative">
+              <textarea
+                value={privateKey}
+                onChange={(e) => setPrivateKey(e.target.value)}
+                placeholder="-----BEGIN EC PRIVATE KEY-----&#10;Votre clé privée ECDSA...&#10;-----END EC PRIVATE KEY-----"
+                rows={4}
+                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-mono resize-none"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Clé privée ECDSA complète au format PEM
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center space-x-2 text-red-400">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">{error}</span>
+          </div>
+        )}
+
+        <div className="flex flex-col space-y-3">
+          <button
+            onClick={handleTestConnection}
+            disabled={isLoading || !apiKeyName.trim() || !privateKey.trim()}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Test de connexion...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Tester et connecter</span>
+              </>
+            )}
+          </button>
+          
+          <button
+            onClick={() => setCurrentStep('guide')}
+            className="text-gray-400 hover:text-gray-300 text-sm transition-colors duration-200"
+          >
+            Retour au guide
+          </button>
+        </div>
+      </div>
+    ),
+
+    testing: (
+      <div className="text-center space-y-6">
+        <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        </div>
+        
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-gray-100">
+            Test de connexion...
+          </h3>
+          <p className="text-gray-400">
+            Vérification de vos clés CDP Coinbase
+          </p>
+        </div>
+      </div>
+    ),
+
+    success: (
+      <div className="text-center space-y-6">
+        <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-green-500" />
+        </div>
+        
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-gray-100">
+            Connexion réussie !
+          </h3>
+          <p className="text-gray-400">
+            Votre compte Coinbase Advanced Trade est maintenant connecté
+          </p>
+        </div>
+      </div>
+    )
+  };
+
+  console.log('CoinbaseConnectionModal render - isOpen:', isOpen, 'currentStep:', currentStep);
+  
   return (
     <AnimatePresence>
-      {open && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {isOpen && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full shadow-2xl"
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden"
           >
             {/* Header */}
-            <div className="relative p-6 border-b border-gray-700">
-              <button
-                onClick={() => onOpenChange(false)}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                  <SiCoinbase className="w-6 h-6 text-blue-400" />
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                  <SiCoinbase className="w-4 h-4 text-blue-500" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">
-                    Connexion Coinbase
-                  </h3>
-                  <p className="text-gray-400 text-sm">
-                    Authentification OAuth2 sécurisée
-                  </p>
-                </div>
+                <span className="font-medium text-gray-100">
+                  Coinbase Advanced Trade
+                </span>
               </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-300 transition-colors duration-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Description */}
-              <div className="text-center space-y-2">
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  Connectez votre compte Coinbase de manière sécurisée pour accéder au trading automatisé dans l'environnement sandbox.
-                </p>
-              </div>
-
-              {/* Features */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-200">Authentification sécurisée</p>
-                    <p className="text-xs text-gray-400">OAuth2 avec chiffrement de bout en bout</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                  <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <Globe className="w-4 h-4 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-200">Environnement sandbox</p>
-                    <p className="text-xs text-gray-400">Tests sécurisés sans risque financier</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Lock className="w-4 h-4 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-200">Révocation possible</p>
-                    <p className="text-xs text-gray-400">Contrôle total depuis votre compte Coinbase</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Process Steps */}
-              <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/50">
-                <h4 className="text-sm font-medium text-gray-200 mb-3">Processus de connexion :</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-xs text-gray-400">
-                    <div className="w-4 h-4 rounded-full bg-blue-500/30 flex items-center justify-center">
-                      <span className="text-blue-400 font-bold text-xs">1</span>
-                    </div>
-                    <span>Redirection vers Coinbase</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-400">
-                    <div className="w-4 h-4 rounded-full bg-blue-500/30 flex items-center justify-center">
-                      <span className="text-blue-400 font-bold text-xs">2</span>
-                    </div>
-                    <span>Autorisation des permissions</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-400">
-                    <div className="w-4 h-4 rounded-full bg-blue-500/30 flex items-center justify-center">
-                      <span className="text-blue-400 font-bold text-xs">3</span>
-                    </div>
-                    <span>Retour automatique dans l'application</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Permissions */}
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                <div className="flex items-start space-x-2">
-                  <Shield className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h5 className="text-sm font-medium text-yellow-400 mb-1">Permissions demandées :</h5>
-                    <ul className="text-xs text-yellow-200/80 space-y-1">
-                      <li>• Lecture des informations de compte</li>
-                      <li>• Consultation des soldes</li>
-                      <li>• Historique des transactions</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={() => onOpenChange(false)}
-                  disabled={isConnecting}
-                  className="flex-1 px-4 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isConnecting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span>Connexion...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Se connecter</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Footer Note */}
-              <div className="text-center pt-2">
-                <p className="text-xs text-gray-500">
-                  En vous connectant, vous acceptez que WarrenAI accède à vos données Coinbase selon les permissions accordées.
-                </p>
-              </div>
+                  {steps[currentStep]}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         </div>

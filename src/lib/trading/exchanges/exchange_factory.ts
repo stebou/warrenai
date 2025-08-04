@@ -2,6 +2,7 @@
 import { BaseExchange } from './base_exchange';
 import { BinanceExchange } from './binance_exchange';
 import { CoinbaseAdvancedExchange } from './coinbase_advanced_exchange';
+import { CoinbaseAdvancedClient } from './coinbase_advanced_client_v2';
 import { prisma } from '@/lib/prisma';
 import { log } from '@/lib/logger';
 
@@ -61,6 +62,7 @@ export class ExchangeFactory {
         }) as any; // Cast temporaire pour compatibilité
         break;
         
+        
       default:
         throw new Error(`Exchange type ${config.type} not supported`);
     }
@@ -117,14 +119,21 @@ export class ExchangeFactory {
   }
 
   // Méthode pour créer un exchange en récupérant les clés de l'utilisateur
-  static async createForUser(userId: string, exchangeType: 'binance' = 'binance', testnet: boolean = true): Promise<BaseExchange> {
+  static async createForUser(userId: string, exchangeType: ExchangeType = 'binance', testnet: boolean = true): Promise<BaseExchange> {
     try {
       // Récupérer les clés de l'utilisateur depuis la base de données
+      let exchangeName: string;
+      if (exchangeType === 'coinbase' || exchangeType === 'coinbase-advanced') {
+        exchangeName = 'COINBASE';
+      } else {
+        exchangeName = exchangeType.toUpperCase();
+      }
+      
       const credentials = await prisma.exchangeCredentials.findFirst({
         where: {
           userId,
-          exchange: exchangeType.toUpperCase() as any,
-          isTestnet: testnet,
+          exchange: exchangeName as any,
+          isTestnet: exchangeType === 'coinbase' ? false : testnet, // Coinbase n'a pas de testnet
           isActive: true
         }
       });
@@ -139,12 +148,35 @@ export class ExchangeFactory {
       }
 
       // Créer l'exchange avec les clés de l'utilisateur
-      const exchange = await this.create({
-        type: exchangeType,
-        apiKey: credentials.apiKey,
-        apiSecret: credentials.apiSecret,
-        testnet
-      });
+      let exchange: BaseExchange;
+      
+      if (exchangeType === 'coinbase' || exchangeType === 'coinbase-advanced') {
+        // Pour Coinbase, utiliser directement CoinbaseAdvancedClient
+        const coinbaseClient = new CoinbaseAdvancedClient({
+          apiKeyName: credentials.apiKey,
+          privateKey: credentials.apiSecret,
+          sandbox: false
+        });
+        
+        // Adapter le client Coinbase pour qu'il implémente BaseExchange
+        exchange = {
+          isConnected: () => true,
+          connect: async () => { /* Coinbase se connecte automatiquement */ },
+          disconnect: async () => { /* Pas de déconnexion nécessaire */ },
+          getAccountInfo: async () => {
+            const accounts = await coinbaseClient.getAccounts();
+            return { accounts };
+          },
+          // Autres méthodes nécessaires...
+        } as any; // Cast temporaire
+      } else {
+        exchange = await this.create({
+          type: exchangeType,
+          apiKey: credentials.apiKey,
+          apiSecret: credentials.apiSecret,
+          testnet
+        });
+      }
 
       // Mettre à jour la date de dernière utilisation
       await prisma.exchangeCredentials.update({

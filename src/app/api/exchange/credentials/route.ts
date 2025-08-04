@@ -4,11 +4,12 @@ import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { log } from '@/lib/logger';
 import { BinanceExchange } from '@/lib/trading/exchanges/binance_exchange';
+import { CoinbaseAdvancedClient } from '@/lib/trading/exchanges/coinbase_advanced_client_v2';
 import { z } from 'zod';
 
 // Schema de validation pour les clés d'exchange
 const ExchangeCredentialsSchema = z.object({
-  exchange: z.enum(['BINANCE', 'BINANCE_FUTURES']),
+  exchange: z.enum(['BINANCE', 'BINANCE_FUTURES', 'COINBASE']),
   apiKey: z.string().min(1, 'API Key est requis'),
   apiSecret: z.string().min(1, 'API Secret est requis'),
   isTestnet: z.boolean().default(true),
@@ -115,31 +116,51 @@ export async function POST(request: NextRequest) {
 
     // Tester la validité des clés en tentant une connexion
     try {
-      const testExchange = new BinanceExchange({
-        apiKey: validatedData.apiKey,
-        apiSecret: validatedData.apiSecret,
-        testnet: validatedData.isTestnet
-      });
+      if (validatedData.exchange === 'COINBASE') {
+        // Test des credentials Coinbase
+        const testClient = new CoinbaseAdvancedClient({
+          apiKeyName: validatedData.apiKey,
+          privateKey: validatedData.apiSecret,
+          sandbox: false
+        });
 
-      await testExchange.connect();
-      await testExchange.getAccountInfo(); // Test simple pour vérifier les permissions
-      await testExchange.disconnect();
+        const isConnected = await testClient.testConnection();
+        if (!isConnected) {
+          throw new Error('Connexion Coinbase échouée');
+        }
 
-      log.info('[API] Binance credentials tested successfully', { 
-        userId: user.id,
-        exchange: validatedData.exchange,
-        isTestnet: validatedData.isTestnet
-      });
+        log.info('[API] Coinbase credentials tested successfully', { 
+          userId: user.id,
+          exchange: validatedData.exchange
+        });
+      } else {
+        // Test des credentials Binance
+        const testExchange = new BinanceExchange({
+          apiKey: validatedData.apiKey,
+          apiSecret: validatedData.apiSecret,
+          testnet: validatedData.isTestnet
+        });
+
+        await testExchange.connect();
+        await testExchange.getAccountInfo(); // Test simple pour vérifier les permissions
+        await testExchange.disconnect();
+
+        log.info('[API] Binance credentials tested successfully', { 
+          userId: user.id,
+          exchange: validatedData.exchange,
+          isTestnet: validatedData.isTestnet
+        });
+      }
 
     } catch (testError) {
-      log.error('[API] Invalid Binance credentials provided', { 
+      log.error('[API] Invalid exchange credentials provided', { 
         error: testError,
         userId: user.id,
         exchange: validatedData.exchange 
       });
       
       return NextResponse.json({ 
-        error: 'Clés API invalides ou permissions insuffisantes' 
+        error: `Clés ${validatedData.exchange} invalides ou permissions insuffisantes` 
       }, { status: 400 });
     }
 
@@ -260,15 +281,28 @@ export async function PUT(request: NextRequest) {
     // Si de nouvelles clés sont fournies, les tester
     if (updateData.apiKey && updateData.apiSecret) {
       try {
-        const testExchange = new BinanceExchange({
-          apiKey: updateData.apiKey,
-          apiSecret: updateData.apiSecret,
-          testnet: existingCredentials.isTestnet
-        });
+        if (existingCredentials.exchange === 'COINBASE') {
+          const testClient = new CoinbaseAdvancedClient({
+            apiKeyName: updateData.apiKey,
+            privateKey: updateData.apiSecret,
+            sandbox: false
+          });
 
-        await testExchange.connect();
-        await testExchange.getAccountInfo();
-        await testExchange.disconnect();
+          const isConnected = await testClient.testConnection();
+          if (!isConnected) {
+            throw new Error('Connexion Coinbase échouée');
+          }
+        } else {
+          const testExchange = new BinanceExchange({
+            apiKey: updateData.apiKey,
+            apiSecret: updateData.apiSecret,
+            testnet: existingCredentials.isTestnet
+          });
+
+          await testExchange.connect();
+          await testExchange.getAccountInfo();
+          await testExchange.disconnect();
+        }
 
       } catch (testError) {
         return NextResponse.json({ 

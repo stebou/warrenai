@@ -84,7 +84,7 @@ export class CoinbaseAdvancedClient {
   constructor(config: CoinbaseAdvancedConfig) {
     this.config = config;
     this.baseUrl = config.sandbox 
-      ? 'https://api-public.sandbox.exchange.coinbase.com'
+      ? 'https://api-sandbox.coinbase.com'
       : 'https://api.coinbase.com';
     
     this.client = axios.create({
@@ -118,12 +118,14 @@ export class CoinbaseAdvancedClient {
    * Générer un token JWT pour l'authentification avec jsonwebtoken
    */
   private generateJWT(method: string, path: string, body: string, timestamp: number): string {
+    const uri = `${method} ${path}`;
+    
     const payload = {
       iss: 'cdp',
       nbf: timestamp,
-      exp: timestamp + 120, // Token expire dans 2 minutes
+      exp: timestamp + 120,
       sub: this.config.apiKey,
-      aud: ['coinbase-advanced-api']
+      aud: ['retail_rest_api_proxy']
     };
 
     const header = {
@@ -133,8 +135,8 @@ export class CoinbaseAdvancedClient {
     };
 
     try {
-      // Convertir la clé privée base64 au format PEM
-      let privateKey = this.config.apiSecret;
+      // Convertir la clé privée avec correction des newlines
+      let privateKey = this.config.apiSecret.replace(/\\n/g, '\n');
       
       if (!privateKey.includes('-----BEGIN')) {
         // Utiliser le format exact spécifié par Coinbase CDP
