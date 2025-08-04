@@ -65,14 +65,11 @@ export default function TradingViewChart({
           <AdvancedRealTimeChart
             symbol={currentSymbol}
             theme="dark"
-            autosize
+            width="100%"
+            height="500"
             interval="60"
-            locale="fr"
-            timezone="Europe/Paris"
-            style="1"
-            enable_publishing={false}
-            hide_side_toolbar={false}
-            save_image={false}
+            locale="en"
+            timezone="Etc/UTC"
           />
         </div>
       </div>
