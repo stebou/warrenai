@@ -1,16 +1,19 @@
 // src/lib/trading/exchanges/exchange_factory.ts
 import { BaseExchange } from './base_exchange';
-import { MockExchange } from './mock_exchange';
+import { BinanceExchange } from './binance_exchange';
+import { prisma } from '@/lib/prisma';
 import { log } from '@/lib/logger';
 
-export type ExchangeType = 'mock' | 'binance' | 'coinbase';
+export type ExchangeType = 'binance' | 'coinbase';
 
 export interface ExchangeConfig {
   type: ExchangeType;
   apiKey?: string;
   apiSecret?: string;
   sandbox?: boolean;
+  testnet?: boolean; // Pour Binance testnet
   rateLimit?: number;
+  userId?: string; // Pour récupérer les clés de l'utilisateur
 }
 
 export class ExchangeFactory {
@@ -28,17 +31,20 @@ export class ExchangeFactory {
     let exchange: BaseExchange;
 
     switch (config.type) {
-      case 'mock':
-        exchange = new MockExchange();
-        break;
-        
       case 'binance':
-        // TODO: Implémenter BinanceExchange
-        throw new Error('Binance exchange not implemented yet. Use mock for testing.');
+        if (!config.apiKey || !config.apiSecret) {
+          throw new Error('Binance exchange requires apiKey and apiSecret');
+        }
+        exchange = new BinanceExchange({
+          apiKey: config.apiKey,
+          apiSecret: config.apiSecret,
+          testnet: config.testnet || false
+        });
+        break;
         
       case 'coinbase':
         // TODO: Implémenter CoinbaseExchange
-        throw new Error('Coinbase exchange not implemented yet. Use mock for testing.');
+        throw new Error('Coinbase exchange not implemented yet.');
         
       default:
         throw new Error(`Exchange type ${config.type} not supported`);
@@ -93,5 +99,62 @@ export class ExchangeFactory {
       type: key,
       connected: exchange.isConnected()
     }));
+  }
+
+  // Méthode pour créer un exchange en récupérant les clés de l'utilisateur
+  static async createForUser(userId: string, exchangeType: 'binance' = 'binance', testnet: boolean = true): Promise<BaseExchange> {
+    try {
+      // Récupérer les clés de l'utilisateur depuis la base de données
+      const credentials = await prisma.exchangeCredentials.findFirst({
+        where: {
+          userId,
+          exchange: exchangeType.toUpperCase() as any,
+          isTestnet: testnet,
+          isActive: true
+        }
+      });
+
+      if (!credentials) {
+        log.warn('[ExchangeFactory] No credentials found for user', { 
+          userId, 
+          exchangeType, 
+          testnet 
+        });
+        throw new Error(`No ${exchangeType} credentials found for user ${userId}. Please connect your exchange account first.`);
+      }
+
+      // Créer l'exchange avec les clés de l'utilisateur
+      const exchange = await this.create({
+        type: exchangeType,
+        apiKey: credentials.apiKey,
+        apiSecret: credentials.apiSecret,
+        testnet
+      });
+
+      // Mettre à jour la date de dernière utilisation
+      await prisma.exchangeCredentials.update({
+        where: { id: credentials.id },
+        data: { lastUsed: new Date() }
+      });
+
+      log.info('[ExchangeFactory] Exchange created for user', {
+        userId,
+        exchangeType,
+        testnet,
+        credentialsId: credentials.id
+      });
+
+      return exchange;
+
+    } catch (error) {
+      log.error('[ExchangeFactory] Failed to create exchange for user', {
+        userId,
+        exchangeType,
+        testnet,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      throw error;
+    }
   }
 }

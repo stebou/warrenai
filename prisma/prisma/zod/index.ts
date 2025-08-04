@@ -16,13 +16,13 @@ export const transformJsonNull = (v?: NullableJsonInput) => {
   return v;
 };
 
-export const JsonValueSchema: z.ZodType<any> = z.lazy(() =>
+export const JsonValueSchema: z.ZodType<Prisma.JsonValue> = z.lazy(() =>
   z.union([
     z.string(),
     z.number(),
     z.boolean(),
     z.literal(null),
-    z.record(z.string(), z.lazy(() => JsonValueSchema)),
+    z.record(z.lazy(() => JsonValueSchema.optional())),
     z.array(z.lazy(() => JsonValueSchema)),
   ])
 );
@@ -36,13 +36,13 @@ export const NullableJsonValue = z
 
 export type NullableJsonValueType = z.infer<typeof NullableJsonValue>;
 
-export const InputJsonValueSchema: z.ZodType<any> = z.lazy(() =>
+export const InputJsonValueSchema: z.ZodType<Prisma.InputJsonValue> = z.lazy(() =>
   z.union([
     z.string(),
     z.number(),
     z.boolean(),
-    z.object({ toJSON: z.function() }),
-    z.record(z.string(), z.lazy(() => z.union([InputJsonValueSchema, z.literal(null)]))),
+    z.object({ toJSON: z.function(z.tuple([]), z.any()) }),
+    z.record(z.lazy(() => z.union([InputJsonValueSchema, z.literal(null)]))),
     z.array(z.lazy(() => z.union([InputJsonValueSchema, z.literal(null)]))),
   ])
 );
@@ -66,6 +66,8 @@ export const BotStatsScalarFieldEnumSchema = z.enum(['id','botId','startedAt','l
 
 export const SubscriptionScalarFieldEnumSchema = z.enum(['id','userId','stripeId','priceId','status','createdAt']);
 
+export const ExchangeCredentialsScalarFieldEnumSchema = z.enum(['id','userId','exchange','apiKey','apiSecret','isTestnet','isActive','label','createdAt','updatedAt','lastUsed']);
+
 export const SortOrderSchema = z.enum(['asc','desc']);
 
 export const JsonNullValueInputSchema = z.enum(['JsonNull',]).transform((value) => (value === 'JsonNull' ? Prisma.JsonNull : value));
@@ -81,6 +83,10 @@ export const JsonNullValueFilterSchema = z.enum(['DbNull','JsonNull','AnyNull',]
 export const BotStatusSchema = z.enum(['ACTIVE','INACTIVE','ARCHIVED','ERROR']);
 
 export type BotStatusType = `${z.infer<typeof BotStatusSchema>}`
+
+export const ExchangeTypeSchema = z.enum(['BINANCE','BINANCE_FUTURES']);
+
+export type ExchangeTypeType = `${z.infer<typeof ExchangeTypeSchema>}`
 
 /////////////////////////////////////////
 // MODELS
@@ -176,3 +182,23 @@ export const SubscriptionSchema = z.object({
 })
 
 export type Subscription = z.infer<typeof SubscriptionSchema>
+
+/////////////////////////////////////////
+// EXCHANGE CREDENTIALS SCHEMA
+/////////////////////////////////////////
+
+export const ExchangeCredentialsSchema = z.object({
+  exchange: ExchangeTypeSchema,
+  id: z.string().uuid(),
+  userId: z.string(),
+  apiKey: z.string(),
+  apiSecret: z.string(),
+  isTestnet: z.boolean(),
+  isActive: z.boolean(),
+  label: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  lastUsed: z.coerce.date().nullable(),
+})
+
+export type ExchangeCredentials = z.infer<typeof ExchangeCredentialsSchema>

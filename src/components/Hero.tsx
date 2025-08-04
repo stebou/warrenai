@@ -4,6 +4,7 @@ import { SignInButton, SignUpButton, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { TrendingUp, BarChart3, Zap, Shield, Target, Bot } from 'lucide-react';
+import { TokenIcon } from '@web3icons/react';
 import { useState, useEffect } from 'react';
 
 // Positions fixes pour les étoiles (évite le problème d'hydratation)
@@ -261,8 +262,8 @@ export default function Hero() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold text-white">BTC</span>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-800/40 backdrop-blur-sm">
+                              <TokenIcon symbol="BTC" size={20} variant="branded" />
                             </div>
                             <div>
                               <div className="text-white font-medium">BTC/USDT</div>
@@ -276,8 +277,8 @@ export default function Hero() {
                         </div>
                         <div className="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold text-white">ETH</span>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-800/40 backdrop-blur-sm">
+                              <TokenIcon symbol="ETH" size={20} variant="branded" />
                             </div>
                             <div>
                               <div className="text-white font-medium">ETH/USDT</div>

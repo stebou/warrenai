@@ -22,7 +22,18 @@ export async function POST() {
 
     // Récupérer tous les bots de l'utilisateur
     const userBots = await prisma.bot.findMany({
-      where: { userId: user.id }
+      where: { userId: user.id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        strategy: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        aiConfig: true,
+        userId: true  // AJOUTÉ: nécessaire pour ExchangeFactory.createForUser
+      }
     });
 
     const botController = BotController.getInstance();

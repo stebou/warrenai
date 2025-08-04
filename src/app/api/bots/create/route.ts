@@ -2,10 +2,15 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { log } from '@/lib/logger';
-import { generateBotFromConfig, type BotCreationConfig } from '@/lib/trading/agents/bot_creation/agent';
+import { generateBotFromConfig } from '@/lib/trading/agents/bot_creation/agent';
 import { BotStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { ensureUserExists } from '@/lib/auth/sync-user';
+import { 
+  validateBotCreationConfig, 
+  calculateRiskLevel,
+  type ValidatedBotCreationConfig 
+} from '@/lib/trading/agents/bot_creation/validation';
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +24,7 @@ export async function POST(req: Request) {
     await ensureUserExists(userId);
 
     // 2. Validation du corps de la requête
-    const body = await req.json() as BotCreationConfig;
+    const body = await req.json() as any;
     if (!body.name || !body.riskLimits) {
         return NextResponse.json({ error: 'Invalid input: name and riskLimits are required.' }, { status: 400 });
     }
@@ -32,7 +37,7 @@ export async function POST(req: Request) {
     const newBot = await prisma.bot.create({
       data: {
         name: botSpec.name,
-        description: body.description || botSpec.description,
+        description: botSpec.description,
         strategy: botSpec.strategy,
         aiConfig: botSpec.aiConfig,
         status: BotStatus.INACTIVE,
@@ -52,62 +57,21 @@ export async function POST(req: Request) {
 
     log.info('Bot created successfully in DB', { botId: newBot.id, ownerClerkId: userId });
 
-    // 5. Retourner une réponse de succès avec informations enrichies
-    return NextResponse.json({
-      ...newBot,
-      validationInfo: {
-        riskLevel: body.riskLevel || 'auto-calculated',
-        configCompliance: 'valid',
-        strategiesApplied: body.strategyHints || [],
-        riskScore: {
-          maxAllocation: body.riskLimits.maxAllocation,
-          maxDailyLoss: body.riskLimits.maxDailyLoss,
-          calculatedLevel: body.riskLevel || 'medium'
-        }
-      }
-    }, { status: 201 });
+    // 5. Retourner une réponse de succès
+    return NextResponse.json(newBot, { status: 201 });
 
   } catch (error) {
-    // Logging détaillé pour diagnostiquer le problème
-    const errorInfo = {
-      message: error instanceof Error ? error.message : String(error),
-      name: error instanceof Error ? error.name : typeof error,
-      stack: error instanceof Error ? error.stack : null,
-      code: error && typeof error === 'object' && 'code' in error ? error.code : null,
-      meta: error && typeof error === 'object' && 'meta' in error ? error.meta : null,
-      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
-    };
-    
-    log.error('Failed to create bot - detailed error', errorInfo);
+    log.error('Failed to create bot', { error });
 
-    // Gestion d'erreur améliorée avec détails pour le debug
+    // Gestion d'erreur améliorée
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      log.error('Prisma error details', { code: error.code, meta: error.meta });
-      
       // Erreur spécifique si l'utilisateur n'est pas trouvé (P2025)
       if (error.code === 'P2025') {
         return NextResponse.json({ error: 'User not found in database. Please ensure webhook is working.' }, { status: 404 });
       }
-      
-      // Erreur de validation (P2002 = unique constraint)
-      if (error.code === 'P2002') {
-        return NextResponse.json({ error: 'Bot name already exists or constraint violation.' }, { status: 409 });
-      }
     }
 
-    // Erreur spécifique pour les champs inconnus
-    if (errorInfo.message.includes('Unknown arg') || errorInfo.message.includes('Unknown argument')) {
-      log.error('Prisma schema mismatch detected', { errorMessage: errorInfo.message });
-      return NextResponse.json({ 
-        error: 'Database schema mismatch. Please contact support.',
-        details: 'The database client may need to be regenerated.'
-      }, { status: 500 });
-    }
-    
-    return NextResponse.json({ 
-      error: 'Failed to create bot',
-      details: errorInfo.message,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+    // Erreur générique pour tous les autres cas
+    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
   }
 }

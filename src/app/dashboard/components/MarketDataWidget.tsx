@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Activity, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, BarChart3, ChevronDown } from 'lucide-react';
+import { TokenIcon } from '@web3icons/react';
 
 interface MarketData {
   time: string;
@@ -21,42 +22,43 @@ interface TickerData {
   low24h: number;
 }
 
+// Cryptos disponibles avec leurs informations
+const AVAILABLE_CRYPTOS = [
+  { symbol: 'BTCUSDT', name: 'Bitcoin', tokenSymbol: 'BTC' },
+  { symbol: 'ETHUSDT', name: 'Ethereum', tokenSymbol: 'ETH' },
+  { symbol: 'BNBUSDT', name: 'BNB', tokenSymbol: 'BNB' },
+  { symbol: 'ADAUSDT', name: 'Cardano', tokenSymbol: 'ADA' },
+  { symbol: 'SOLUSDT', name: 'Solana', tokenSymbol: 'SOL' },
+  { symbol: 'XRPUSDT', name: 'XRP', tokenSymbol: 'XRP' }
+];
+
 export default function MarketDataWidget() {
   const [marketHistory, setMarketHistory] = useState<MarketData[]>([]);
   const [currentTicker, setCurrentTicker] = useState<TickerData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedCrypto, setSelectedCrypto] = useState(AVAILABLE_CRYPTOS[0]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchMarketData = async () => {
     try {
-      const response = await fetch('/api/exchange/test');
+      const response = await fetch(`/api/market/realtime?symbol=${selectedCrypto.symbol}&interval=1m&limit=15`);
       const data = await response.json();
       
-      if (data.success && data.tests?.ticker) {
-        const ticker = data.tests.ticker;
-        const timestamp = new Date().toLocaleTimeString('fr-FR', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
+      if (data.success && data.data) {
+        const { ticker, priceHistory } = data.data;
         
-        const newDataPoint: MarketData = {
-          time: timestamp,
-          price: ticker.price,
-          change24h: ticker.change24h,
-          volume: Math.random() * 1000000 // Volume simulé
-        };
+        // Mise à jour de l'historique des prix avec les vraies données Binance
+        setMarketHistory(priceHistory);
 
-        setMarketHistory(prevData => {
-          const newData = [...prevData, newDataPoint];
-          return newData.slice(-15); // Garder 15 points
-        });
-
+        // Mise à jour du ticker actuel avec les vraies données
         setCurrentTicker({
           symbol: ticker.symbol,
           price: ticker.price,
           change24h: ticker.change24h,
-          volume24h: Math.random() * 10000000,
-          high24h: ticker.price * (1 + Math.random() * 0.05),
-          low24h: ticker.price * (1 - Math.random() * 0.05)
+          volume24h: ticker.volume24h,
+          high24h: ticker.high24h,
+          low24h: ticker.low24h
         });
 
         setIsLoading(false);
@@ -69,8 +71,22 @@ export default function MarketDataWidget() {
 
   useEffect(() => {
     fetchMarketData();
-    const interval = setInterval(fetchMarketData, 8000); // Mise à jour toutes les 8 secondes
+    const interval = setInterval(fetchMarketData, 5000); // Mise à jour toutes les 5 secondes pour plus de réactivité
     return () => clearInterval(interval);
+  }, [selectedCrypto]); // Rafraîchir quand la crypto change
+
+  // Fermer le dropdown quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -106,43 +122,102 @@ export default function MarketDataWidget() {
 
   return (
     <div className="space-y-6">
-      {/* Ticker Principal */}
-      {currentTicker && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6"
-        >
+      {/* Sélecteur de Crypto et Ticker Principal */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6"
+      >
+        {/* Sélecteur de Crypto */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="relative" ref={dropdownRef}>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-3 px-4 py-2 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg hover:border-[#14b8a6]/50 transition-all duration-200"
+            >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-800/30 backdrop-blur-sm">
+                <TokenIcon symbol={selectedCrypto.tokenSymbol} size={24} variant="branded" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-semibold text-sm">{selectedCrypto.name}</p>
+                <p className="text-gray-400 text-xs">{selectedCrypto.symbol}</p>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </motion.button>
+
+            {/* Dropdown */}
+            {isDropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-full left-0 mt-2 w-full bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow-xl z-[9999] overflow-hidden"
+              >
+                {AVAILABLE_CRYPTOS.map((crypto) => (
+                  <motion.button
+                    key={crypto.symbol}
+                    whileHover={{ backgroundColor: 'rgba(20, 184, 166, 0.1)' }}
+                    onClick={() => {
+                      setSelectedCrypto(crypto);
+                      setIsDropdownOpen(false);
+                      setIsLoading(true);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-[#14b8a6]/10 transition-colors duration-150"
+                  >
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-800/30 backdrop-blur-sm">
+                      <TokenIcon symbol={crypto.tokenSymbol} size={20} variant="branded" />
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-medium">{crypto.name}</p>
+                      <p className="text-gray-400 text-xs">{crypto.symbol}</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </div>
+          
+          <div className="text-xs text-gray-400 flex items-center gap-2">
+            <div className="w-2 h-2 bg-[#10b981] rounded-full animate-pulse"></div>
+            <span>Binance Testnet</span>
+          </div>
+        </div>
+
+        {/* Ticker Info */}
+        {currentTicker && (
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">₿</span>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-800/40 backdrop-blur-sm shadow-lg border border-gray-700/30">
+                <TokenIcon symbol={selectedCrypto.tokenSymbol} size={32} variant="branded" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">{currentTicker.symbol}</h3>
-                <p className="text-gray-400 text-sm">Bitcoin / Tether</p>
+                <h3 className="text-2xl font-bold text-white">{selectedCrypto.name}</h3>
+                <p className="text-gray-400 text-sm">{currentTicker.symbol}</p>
               </div>
             </div>
             
             <div className="text-right">
-              <p className="text-2xl font-bold text-[#14b8a6]">
+              <p className="text-3xl font-bold text-[#14b8a6]">
                 ${currentTicker.price.toFixed(2)}
               </p>
-              <div className={`flex items-center gap-1 justify-end ${
+              <div className={`flex items-center gap-2 justify-end ${
                 currentTicker.change24h >= 0 ? 'text-[#10b981]' : 'text-red-400'
               }`}>
                 {currentTicker.change24h >= 0 ? (
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-5 h-5" />
                 ) : (
-                  <TrendingDown className="w-4 h-4" />
+                  <TrendingDown className="w-5 h-5" />
                 )}
-                <span className="font-semibold">
+                <span className="font-bold text-lg">
                   {currentTicker.change24h >= 0 ? '+' : ''}{currentTicker.change24h.toFixed(2)}%
                 </span>
               </div>
             </div>
           </div>
+        )}
 
           {/* Statistiques 24h */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-700/50">
@@ -159,8 +234,7 @@ export default function MarketDataWidget() {
               <p className="text-white font-semibold">{(currentTicker.volume24h / 1000000).toFixed(1)}M</p>
             </div>
           </div>
-        </motion.div>
-      )}
+      </motion.div>
 
       {/* Graphique de Prix */}
       <motion.div
@@ -192,7 +266,8 @@ export default function MarketDataWidget() {
                   stroke="#9CA3AF" 
                   fontSize={10}
                   tick={{ fill: '#9CA3AF' }}
-                  domain={['dataMin - 100', 'dataMax + 100']}
+                  domain={['dataMin - 5', 'dataMax + 5']}
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Line

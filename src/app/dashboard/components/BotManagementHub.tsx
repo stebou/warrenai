@@ -22,7 +22,8 @@ import {
   CheckCircle,
   Clock,
   Target,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import BotDetailModal from './BotDetailModal';
 import EnhancedCreateBotModal from './EnhancedCreateBotModal';
@@ -58,6 +59,7 @@ export default function BotManagementHub() {
   const [selectedBot, setSelectedBot] = useState<BotData | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ bot: BotData } | null>(null);
 
   // Récupérer les données des bots
   const fetchBots = async (isInitialLoad = false) => {
@@ -156,6 +158,59 @@ export default function BotManagementHub() {
       setLoadingBots(prev => {
         const newSet = new Set(prev);
         newSet.delete(botId);
+        return newSet;
+      });
+    }
+  };
+
+  // Fonction pour ouvrir la modal de confirmation de suppression
+  const handleDeleteBot = (botId: string, botName: string) => {
+    const bot = bots.find(b => b.id === botId);
+    if (bot) {
+      setDeleteConfirmation({ bot });
+    }
+  };
+
+  // Fonction pour confirmer la suppression
+  const confirmDeleteBot = async () => {
+    if (!deleteConfirmation?.bot) return;
+
+    const { bot } = deleteConfirmation;
+
+    try {
+      // Fermer la modal de confirmation
+      setDeleteConfirmation(null);
+
+      // Ajouter le bot aux bots en cours de chargement
+      setLoadingBots(prev => new Set(prev).add(bot.id));
+      
+      const response = await fetch('/api/bots/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botId: bot.id }),
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // Supprimer le bot de la liste locale immédiatement
+        setBots(prevBots => prevBots.filter(b => b.id !== bot.id));
+        console.log(`Bot "${bot.name}" supprimé avec succès`);
+        
+        // Rafraîchir la liste complète en arrière-plan
+        await fetchBots(false);
+      } else {
+        const error = await response.json();
+        console.error('Failed to delete bot:', error);
+        alert(`Erreur lors de la suppression du bot: ${error.details || error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting bot:', error);
+      alert('Erreur de connexion lors de la suppression du bot');
+    } finally {
+      // Retirer le bot des bots en cours de chargement
+      setLoadingBots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(bot.id);
         return newSet;
       });
     }
@@ -529,6 +584,27 @@ export default function BotManagementHub() {
                     >
                       <Settings className="w-4 h-4" />
                     </motion.button>
+
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteBot(bot.id, bot.name);
+                      }}
+                      disabled={loadingBots.has(bot.id) || isRefreshing}
+                      className="p-2 bg-red-600/20 text-red-400 border border-red-600/30 rounded-lg hover:bg-red-600/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative"
+                      title="Supprimer le bot"
+                    >
+                      {loadingBots.has(bot.id) ? (
+                        <Activity className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      {loadingBots.has(bot.id) && (
+                        <div className="absolute inset-0 bg-red-600/10 rounded-lg animate-pulse"></div>
+                      )}
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>
@@ -553,6 +629,77 @@ export default function BotManagementHub() {
         onOpenChange={setIsCreateModalOpen}
         onBotCreated={fetchBots}
       />
+
+      {/* Modal de confirmation de suppression */}
+      <AnimatePresence>
+        {deleteConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+            onClick={() => setDeleteConfirmation(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gray-900 border border-red-500/50 rounded-xl max-w-md w-full p-6 relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-100">
+                    Supprimer le bot
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    Cette action est irréversible
+                  </p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-4 mb-6">
+                <p className="text-gray-300">
+                  Êtes-vous sûr de vouloir supprimer le bot{' '}
+                  <span className="font-semibold text-white">"{deleteConfirmation.bot.name}"</span> ?
+                </p>
+                
+                <div className="bg-red-950/50 border border-red-500/30 rounded-lg p-4">
+                  <p className="text-red-200 text-sm font-medium mb-2">
+                    Cette action supprimera définitivement :
+                  </p>
+                  <ul className="text-red-300 text-sm space-y-1">
+                    <li>• Le bot et toute sa configuration</li>
+                    <li>• Toutes les statistiques et l'historique</li>
+                    <li>• Tous les ordres en cours (s'il y en a)</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setDeleteConfirmation(null)}
+                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmDeleteBot}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

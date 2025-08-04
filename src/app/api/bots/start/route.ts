@@ -31,6 +31,17 @@ export async function POST(req: Request) {
       where: {
         id: botId,
         userId: user.id
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        strategy: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        aiConfig: true,
+        userId: true  // AJOUTÉ: nécessaire pour ExchangeFactory.createForUser
       }
     });
 

@@ -32,7 +32,8 @@ export async function GET() {
         status: true,
         createdAt: true,
         updatedAt: true,
-        aiConfig: true
+        aiConfig: true,
+        userId: true  // AJOUTÉ: nécessaire pour ExchangeFactory.createForUser
       }
     });
 
@@ -201,7 +202,7 @@ export async function POST(req: Request) {
         lastAction: botInstance.lastAction,
         config: {
           tradingFrequency: botInstance.bot.aiConfig,
-          exchange: 'MockExchange'
+          exchange: botInstance.bot.exchange || 'Unknown'
         }
       }
     });

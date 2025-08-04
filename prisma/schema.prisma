@@ -34,6 +34,7 @@ model User {
 
   bots      Bot[]
   plans     Subscription[]
+  exchangeCredentials ExchangeCredentials[]
 }
 
 model Bot {
@@ -109,5 +110,31 @@ model Subscription {
   createdAt    DateTime @default(now())
 
   user         User     @relation(fields: [userId], references: [id])
+}
+
+// Modèle pour stocker les clés API des exchanges (Binance, etc.)
+model ExchangeCredentials {
+  id           String      @id @default(uuid())
+  userId       String
+  exchange     ExchangeType
+  apiKey       String      // Clé API (en clair pour l'instant, chiffrement à implémenter)
+  apiSecret    String      // Secret API (en clair pour l'instant, chiffrement à implémenter)
+  isTestnet    Boolean     @default(true)
+  isActive     Boolean     @default(true)
+  label        String?     // Label personnalisé pour identifier les clés
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  lastUsed     DateTime?
+
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exchange, isTestnet]) // Un seul ensemble de clés par exchange et environnement par utilisateur
+  @@map("exchange_credentials")
+}
+
+enum ExchangeType {
+  BINANCE
+  BINANCE_FUTURES
+  // Futurs exchanges à ajouter
 }
 

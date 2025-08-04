@@ -11,70 +11,17 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Créer et tester le MockExchange
-    const exchange = await ExchangeFactory.create({ type: 'mock' });
-    
-    // 3. Tests basiques
-    const ticker = await exchange.getTicker('BTC/USDT');
-    const balances = await exchange.getBalance();
-    const orderBook = await exchange.getOrderBook('BTC/USDT', 5);
-    const candles = await exchange.getCandles('BTC/USDT', '1h', 10);
-    
-    // 4. Test d'ordre
-    const testOrder = await exchange.placeOrder({
-      symbol: 'BTC/USDT',
-      side: 'BUY',
-      type: 'MARKET',
-      quantity: 0.001
-    });
-
-    const openOrders = await exchange.getOpenOrders();
-
-    log.info('[Exchange Test] MockExchange tested successfully', {
-      userId,
-      ticker: ticker.price,
-      balancesCount: balances.length,
-      orderId: testOrder.id,
-      openOrdersCount: openOrders.length
-    });
-
     return NextResponse.json({
       success: true,
-      exchange: 'MockExchange',
-      connected: exchange.isConnected(),
-      tests: {
-        ticker: {
-          symbol: ticker.symbol,
-          price: ticker.price,
-          change24h: ticker.changePercent24h
-        },
-        balances: balances.map(b => ({
-          asset: b.asset,
-          free: b.free,
-          total: b.total
-        })),
-        orderBook: {
-          symbol: orderBook.symbol,
-          bestBid: orderBook.bids[0]?.[0],
-          bestAsk: orderBook.asks[0]?.[0],
-          spread: orderBook.asks[0]?.[0] - orderBook.bids[0]?.[0]
-        },
-        candles: {
-          count: candles.length,
-          latest: candles[candles.length - 1]
-        },
-        testOrder: {
-          id: testOrder.id,
-          status: testOrder.status,
-          filled: testOrder.filled,
-          remaining: testOrder.remaining
-        },
-        openOrders: openOrders.length
+      message: 'Exchange test endpoint ready. Use POST to test specific exchanges.',
+      supportedExchanges: ['binance'],
+      instructions: {
+        binance: 'POST with { "exchange": "binance", "apiKey": "your_key", "apiSecret": "your_secret", "testnet": true }'
       }
     });
 
   } catch (error) {
-    log.error('[Exchange Test] Failed to test exchange', { error });
+    log.error('[Exchange Test] Failed to get test info', { error });
     return NextResponse.json({ 
       error: 'Exchange test failed', 
       details: error instanceof Error ? error.message : String(error)
@@ -90,40 +37,77 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { action, symbol, side, type, quantity, price } = body;
+    const { exchange: exchangeType, apiKey, apiSecret, testnet = true } = body;
 
-    const exchange = await ExchangeFactory.create({ type: 'mock' });
-
-    switch (action) {
-      case 'place_order':
-        const order = await exchange.placeOrder({
-          symbol: symbol || 'BTC/USDT',
-          side: side || 'BUY',
-          type: type || 'MARKET',
-          quantity: quantity || 0.001,
-          price
-        });
-        
-        return NextResponse.json({ success: true, order });
-
-      case 'get_ticker':
-        const ticker = await exchange.getTicker(symbol || 'BTC/USDT');
-        return NextResponse.json({ success: true, ticker });
-
-      case 'get_balance':
-        const balances = await exchange.getBalance();
-        return NextResponse.json({ success: true, balances });
-
-      case 'get_open_orders':
-        const openOrders = await exchange.getOpenOrders(symbol);
-        return NextResponse.json({ success: true, orders: openOrders });
-
-      default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    if (!exchangeType) {
+      return NextResponse.json({ 
+        error: 'Exchange type is required',
+        supportedExchanges: ['binance']
+      }, { status: 400 });
     }
 
+    if (exchangeType === 'binance') {
+      if (!apiKey || !apiSecret) {
+        return NextResponse.json({ 
+          error: 'API key and secret are required for Binance'
+        }, { status: 400 });
+      }
+
+      // Test de connexion Binance
+      const exchange = await ExchangeFactory.create({ 
+        type: 'binance',
+        apiKey,
+        apiSecret,
+        testnet
+      });
+      
+      // Tests basiques
+      const accountInfo = await exchange.getAccountInfo();
+      const ticker = await exchange.getTicker('BTC/USDT');
+      const balances = await exchange.getBalance();
+
+      log.info('[Exchange Test] Binance tested successfully', {
+        userId,
+        testnet,
+        accountCanTrade: accountInfo.canTrade,
+        balancesCount: balances.length,
+        btcPrice: ticker.price
+      });
+
+      await exchange.disconnect();
+
+      return NextResponse.json({
+        success: true,
+        exchange: `Binance ${testnet ? 'Testnet' : 'Live'}`,
+        connected: true,
+        tests: {
+          account: {
+            canTrade: accountInfo.canTrade,
+            canWithdraw: accountInfo.canWithdraw,
+            canDeposit: accountInfo.canDeposit,
+            balancesCount: balances.length
+          },
+          ticker: {
+            symbol: ticker.symbol,
+            price: ticker.price,
+            change24h: ticker.changePercent24h
+          },
+          balances: balances.filter(b => b.total > 0).map(b => ({
+            asset: b.asset,
+            free: b.free,
+            total: b.total
+          }))
+        }
+      });
+    }
+
+    return NextResponse.json({ 
+      error: `Exchange type '${exchangeType}' not supported`,
+      supportedExchanges: ['binance']
+    }, { status: 400 });
+
   } catch (error) {
-    log.error('[Exchange API] Request failed', { error });
+    log.error('[Exchange Test] Request failed', { error });
     return NextResponse.json({ 
       error: 'Request failed', 
       details: error instanceof Error ? error.message : String(error)

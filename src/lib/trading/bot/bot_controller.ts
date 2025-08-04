@@ -5,6 +5,7 @@ import { DatabasePersistence } from './db_persistence';
 import { log } from '@/lib/logger';
 import type { Bot } from '@prisma/client';
 import type { OrderRequest, Order, Ticker } from '../exchanges/types';
+import type { TradingWebSocketServer } from '@/lib/realtime/websocket-server';
 
 export interface BotInstance {
   bot: Bot;
@@ -35,9 +36,13 @@ export interface TradingSignal {
 export class BotController {
   private static instance: BotController;
   private activeBots = new Map<string, BotInstance>();
-  private readonly DEFAULT_EXCHANGE = { type: 'mock' as const };
   private isInitialized = false;
   private persistedStats = new Map<string, { startedAt: number; stats: any; lastAction?: number }>();
+  private webSocketServer: TradingWebSocketServer | null = null;
+  
+  // Configuration pour l'exchange à utiliser
+  private readonly USE_BINANCE = process.env.USE_BINANCE_EXCHANGE === 'true';
+  private readonly USE_TESTNET = process.env.BINANCE_USE_TESTNET !== 'false'; // true par défaut
 
   private constructor() {
     log.info('[BotController] Initialized');
@@ -84,6 +89,12 @@ export class BotController {
     return this.instance;
   }
 
+  // Méthode pour configurer le serveur WebSocket
+  setWebSocketServer(wsServer: TradingWebSocketServer): void {
+    this.webSocketServer = wsServer;
+    log.info('[BotController] WebSocket server configured');
+  }
+
   async startBot(bot: Bot): Promise<void> {
     try {
       // Vérifier si le bot est déjà actif
@@ -98,8 +109,8 @@ export class BotController {
         currentActiveBots: this.activeBots.size 
       });
 
-      // Créer la connexion exchange
-      const exchange = await ExchangeFactory.create(this.DEFAULT_EXCHANGE);
+      // Créer la connexion exchange - toujours utiliser Binance maintenant
+      const exchange = await ExchangeFactory.createForUser(bot.userId, 'binance', this.USE_TESTNET);
 
       // Extraire la configuration du bot
       const config = this.extractBotConfig(bot);
@@ -139,6 +150,9 @@ export class BotController {
         intervalMs: intervalMs
       });
       
+      // Exécuter immédiatement le premier cycle de trading
+      setTimeout(() => this.executeTradingCycle(botInstance, config), 1000);
+      
       botInstance.intervalId = setInterval(
         () => this.executeTradingCycle(botInstance, config),
         intervalMs // Convertir minutes en ms
@@ -148,6 +162,17 @@ export class BotController {
 
       // Sauvegarder l'état
       await DatabasePersistence.upsertBotStats(botInstance);
+
+      // Émettre l'événement WebSocket de changement de statut
+      if (this.webSocketServer) {
+        this.webSocketServer.emitBotStatusChange({
+          botId: bot.id,
+          userId: bot.userId,
+          name: bot.name,
+          status: 'running',
+          timestamp: Date.now()
+        });
+      }
 
       log.info('[BotController] Bot started', {
         botId: bot.id,
@@ -186,6 +211,17 @@ export class BotController {
     // Supprimer de la persistance
     await DatabasePersistence.markBotStopped(botId);
 
+    // Émettre l'événement WebSocket de changement de statut
+    if (this.webSocketServer) {
+      this.webSocketServer.emitBotStatusChange({
+        botId,
+        userId: botInstance.bot.userId,
+        name: botInstance.bot.name,
+        status: 'stopped',
+        timestamp: Date.now()
+      });
+    }
+
     log.info('[BotController] Bot stopped', {
       botId,
       botName: botInstance.bot.name,
@@ -200,34 +236,76 @@ export class BotController {
       const aiConfig = bot.aiConfig as any;
       const originalConfig = aiConfig?.originalConfig;
 
-      return {
-        riskLimits: originalConfig?.riskLimits || {
-          maxAllocation: 0.1,
-          maxDailyLoss: 0.05,
-          maxPositionSize: 0.08,
-          stopLoss: 0.02,
-          takeProfit: 0.06,
-          maxDrawdown: 0.15
+      // Configuration stricte basée sur les choix utilisateur
+      const config = {
+        // Stratégie principale choisie par l'utilisateur
+        strategy: originalConfig?.strategyHints?.[0] || bot.strategy || 'momentum',
+        
+        // UNE SEULE PAIRE par bot (requirement strict)
+        targetPair: originalConfig?.targetPairs?.[0] || originalConfig?.selectedPair || 'BTC/USDT',
+        
+        // Fréquence de trading choisie par l'utilisateur
+        tradingFrequency: originalConfig?.advancedConfig?.tradingFrequency || 5, // 5 minutes par défaut
+        
+        // Allocation initiale choisie par l'utilisateur
+        initialAllocation: {
+          initialAmount: originalConfig?.initialAllocation?.initialAmount || 1000,
+          baseCurrency: originalConfig?.initialAllocation?.baseCurrency || 'USDT'
         },
-        strategyHints: originalConfig?.strategyHints || ['momentum'],
-        tradingFrequency: originalConfig?.advancedConfig?.tradingFrequency || 1,
-        targetPairs: originalConfig?.targetPairs || ['BTC/USDT'],
-        preferredIndicators: originalConfig?.preferredIndicators || ['RSI', 'MACD'],
-        initialAllocation: originalConfig?.initialAllocation || {
-          initialAmount: 1000,
-          baseCurrency: 'USDT'
-        }
+        
+        // Risk Management basé sur les recherches 2025
+        riskLimits: {
+          // Position sizing dynamique basé sur la stratégie
+          maxPositionSize: this.getMaxPositionSizeForStrategy(originalConfig?.strategyHints?.[0] || 'momentum'),
+          
+          // Stop-loss basé sur ATR et stratégie
+          stopLossPercent: this.getStopLossForStrategy(originalConfig?.strategyHints?.[0] || 'momentum'),
+          
+          // Take-profit multi-niveaux
+          takeProfitPercent: this.getTakeProfitForStrategy(originalConfig?.strategyHints?.[0] || 'momentum'),
+          
+          // Limites de drawdown
+          maxDailyLoss: originalConfig?.riskLimits?.maxDailyLoss || 0.05,
+          maxDrawdown: originalConfig?.riskLimits?.maxDrawdown || 0.15,
+          
+          // Risk per trade basé sur le capital
+          riskPerTrade: originalConfig?.riskLimits?.riskPerTrade || 0.02 // 2% par trade
+        },
+        
+        // Indicateurs techniques pour la stratégie
+        technicalIndicators: this.getIndicatorsForStrategy(originalConfig?.strategyHints?.[0] || 'momentum'),
+        
+        // Exchange sélectionné (toujours Binance pour l'instant)
+        exchange: originalConfig?.selectedExchange || 'binance'
       };
+
+      log.info('[BotController] Bot configuration extracted', {
+        botId: bot.id,
+        strategy: config.strategy,
+        targetPair: config.targetPair,
+        tradingFrequency: config.tradingFrequency,
+        riskLimits: config.riskLimits
+      });
+
+      return config;
     } catch (error) {
       log.error('[BotController] Failed to extract bot config', { botId: bot.id, error });
-      // Configuration par défaut en cas d'erreur
+      // Configuration par défaut sécurisée
       return {
-        riskLimits: { maxAllocation: 0.1, maxDailyLoss: 0.05, maxPositionSize: 0.08, stopLoss: 0.02 },
-        strategyHints: ['momentum'],
-        tradingFrequency: 1,
-        targetPairs: ['BTC/USDT'],
-        preferredIndicators: ['RSI'],
-        initialAllocation: { initialAmount: 1000, baseCurrency: 'USDT' }
+        strategy: 'momentum',
+        targetPair: 'BTC/USDT',
+        tradingFrequency: 5,
+        initialAllocation: { initialAmount: 1000, baseCurrency: 'USDT' },
+        riskLimits: {
+          maxPositionSize: 0.02,
+          stopLossPercent: 0.02,
+          takeProfitPercent: 0.04,
+          maxDailyLoss: 0.05,
+          maxDrawdown: 0.15,
+          riskPerTrade: 0.02
+        },
+        technicalIndicators: ['RSI', 'MACD'],
+        exchange: 'binance'
       };
     }
   }
@@ -241,20 +319,18 @@ export class BotController {
         botName: botInstance.bot.name,
         timestamp: new Date().toISOString(),
         runtime: Date.now() - (botInstance.startedAt || 0),
-        targetPairs: config.targetPairs
+        targetPair: config.targetPair, // UNE SEULE PAIRE
+        strategy: config.strategy
       });
 
-      // 1. Analyser le marché pour chaque pair
-      for (const symbol of config.targetPairs) {
-        const signal = await this.analyzeMarket(botInstance.exchange, symbol, config);
-        
-        if (signal.action !== 'HOLD') {
-          await this.executeSignal(botInstance, signal, config);
-        }
+      // 1. Analyser le marché pour LA paire choisie par l'utilisateur
+      const signal = await this.analyzeMarket(botInstance.exchange, config.targetPair, config);
+      
+      if (signal.action !== 'HOLD') {
+        await this.executeSignal(botInstance, signal, config);
       }
       
-      // Sauvegarder périodiquement les stats (pour le runtime notamment)
-      // Sauvegarder toutes les 10 minutes ou après chaque batch de trading
+      // Sauvegarder périodiquement les stats
       const shouldSave = (
         botInstance.stats.trades > 0 && 
         (botInstance.stats.trades % 3 === 0 || (Date.now() - (botInstance.lastAction || 0)) > 10 * 60 * 1000)
@@ -311,68 +387,186 @@ export class BotController {
   }
 
   private generateTradingSignal(ticker: any, candles: any[], orderBook: any, config: any): TradingSignal {
-    // Stratégie simple basée sur le momentum et les changements de prix
-    const strategy = config.strategyHints[0] || 'momentum';
+    const strategy = config.strategy.toLowerCase();
     const change24h = ticker.changePercent24h || 0;
     const spread = orderBook.asks[0]?.[0] - orderBook.bids[0]?.[0] || 0;
+    const currentPrice = ticker.price;
     
-    // Calcul de la quantité basée sur l'allocation max
-    const maxPositionValue = config.initialAllocation.initialAmount * config.riskLimits.maxPositionSize;
-    const quantity = Math.min(maxPositionValue / ticker.price, 0.1); // Max 0.1 BTC par exemple
+    // Calcul de la quantité basée sur le risk management 2025
+    const portfolioValue = config.initialAllocation.initialAmount;
+    const riskAmount = portfolioValue * config.riskLimits.riskPerTrade; // 2% du portfolio
+    const stopLossDistance = currentPrice * config.riskLimits.stopLossPercent;
+    
+    // Position sizing basé sur le risque, pas sur un pourcentage fixe
+    let quantity = riskAmount / stopLossDistance;
+    
+    // Ajuster selon le symbole et appliquer des limites raisonnables
+    quantity = this.adjustQuantityForSymbol(config.targetPair, quantity, currentPrice);
+    
+    // Calculer des indicateurs techniques simples
+    const rsi = this.calculateRSI(candles);
+    const macd = this.calculateMACDSignal(candles);
 
-    switch (strategy) {
+    // Déterminer le type de stratégie à partir du nom complexe
+    let strategyType = 'momentum'; // défaut
+    if (strategy.includes('scalping')) {
+      strategyType = 'scalping';
+    } else if (strategy.includes('dca')) {
+      strategyType = 'dca';
+    } else if (strategy.includes('momentum')) {
+      strategyType = 'momentum';
+    }
+
+    // Stratégies basées sur les recherches 2025
+    switch (strategyType) {
       case 'momentum':
-        // Stratégie plus agressive pour les tests (seuils plus bas)
-        if (change24h > 0.5 && spread < ticker.price * 0.002) {
+        // Momentum avec RSI moins restrictif (40/60 au lieu de 30/70)
+        if (rsi < 40 && macd > 0) {
           return {
             action: 'BUY',
-            symbol: ticker.symbol,
+            symbol: config.targetPair,
             quantity,
-            confidence: Math.min(change24h / 5, 0.9),
-            reason: `Momentum positif: +${change24h.toFixed(2)}%`
+            confidence: Math.min((60 - rsi) / 40 + Math.abs(macd) / 10, 0.9),
+            reason: `Momentum BUY: RSI ${rsi.toFixed(1)} < 40, MACD bullish ${macd.toFixed(3)}`
           };
-        } else if (change24h < -0.5) {
+        } else if (rsi > 60 && macd < 0) {
           return {
             action: 'SELL',
-            symbol: ticker.symbol,
+            symbol: config.targetPair,
             quantity,
-            confidence: Math.min(Math.abs(change24h) / 5, 0.9),
-            reason: `Momentum négatif: ${change24h.toFixed(2)}%`
+            confidence: Math.min((rsi - 40) / 40 + Math.abs(macd) / 10, 0.9),
+            reason: `Momentum SELL: RSI ${rsi.toFixed(1)} > 60, MACD bearish ${macd.toFixed(3)}`
           };
         }
         break;
 
       case 'scalping':
-        if (Math.abs(change24h) < 0.5 && spread < ticker.price * 0.0005) {
-          // Stratégie de scalping sur petits mouvements
+        // Scalping avec conditions moins restrictives
+        const spreadPercent = (spread / currentPrice) * 100;
+        if (rsi < 50 && macd > -0.1) { // Conditions très relaxées
           return {
-            action: change24h > 0 ? 'BUY' : 'SELL',
-            symbol: ticker.symbol,
-            quantity: quantity * 0.5, // Positions plus petites pour scalping
-            confidence: 0.3,
-            reason: 'Scalping opportunity'
+            action: 'BUY',
+            symbol: config.targetPair,
+            quantity: quantity * 0.5, // Positions plus petites
+            confidence: 0.5,
+            reason: `Scalping BUY: RSI ${rsi.toFixed(1)} < 50, MACD ${macd.toFixed(3)}`
+          };
+        } else if (rsi > 50 && macd < 0.1) {
+          return {
+            action: 'SELL',
+            symbol: config.targetPair,
+            quantity: quantity * 0.5,
+            confidence: 0.5,
+            reason: `Scalping SELL: RSI ${rsi.toFixed(1)} > 50, MACD ${macd.toFixed(3)}`
           };
         }
         break;
 
       case 'dca':
-        // Dollar Cost Averaging - toujours acheter de petites quantités
-        return {
-          action: 'BUY',
-          symbol: ticker.symbol,
-          quantity: quantity * 0.2, // Petites quantités régulières
-          confidence: 0.5,
-          reason: 'DCA strategy'
-        };
+        // DCA avec conditions très relaxées
+        const sma20 = this.calculateSMA(candles, 20);
+        if (currentPrice < sma20 * 1.02 && rsi < 60) { // Beaucoup moins restrictif
+          return {
+            action: 'BUY',
+            symbol: config.targetPair,
+            quantity: quantity * 0.3, // Achats réguliers plus petits
+            confidence: 0.7,
+            reason: `DCA BUY: Prix ${((currentPrice/sma20 - 1) * 100).toFixed(2)}% vs SMA20, RSI ${rsi.toFixed(1)}`
+          };
+        }
+        break;
     }
 
     return {
       action: 'HOLD',
-      symbol: ticker.symbol,
+      symbol: config.targetPair,
       quantity: 0,
       confidence: 0,
       reason: 'No trading opportunity'
     };
+  }
+
+  /**
+   * Ajuste la quantité selon le symbole pour respecter les précisions Binance
+   */
+  private adjustQuantityForSymbol(symbol: string, quantity: number, price: number): number {
+    // Limites raisonnables selon le symbole
+    if (symbol.includes('BTC')) {
+      // Pour BTC: entre 0.001 et 0.01
+      return Math.min(Math.max(quantity, 0.001), 0.01);
+    } else if (symbol.includes('ETH')) {
+      // Pour ETH: entre 0.01 et 0.1
+      return Math.min(Math.max(quantity, 0.01), 0.1);
+    } else if (symbol.includes('USDT') || symbol.includes('USDC')) {
+      // Pour stablecoins: entre 10 et 1000
+      const valueBasedQuantity = Math.max(10 / price, 10);
+      return Math.min(Math.max(quantity, valueBasedQuantity), 1000);
+    } else {
+      // Pour autres altcoins: entre 1 et 100
+      return Math.min(Math.max(quantity, 1), 100);
+    }
+  }
+
+  /**
+   * Calcul RSI simplifié (14 périodes)
+   */
+  private calculateRSI(candles: any[]): number {
+    if (candles.length < 15) return 50; // Neutre si pas assez de données
+    
+    const prices = candles.slice(-15).map(c => c.close);
+    let gains = 0, losses = 0;
+    
+    for (let i = 1; i < prices.length; i++) {
+      const change = prices[i] - prices[i - 1];
+      if (change > 0) gains += change;
+      else losses += Math.abs(change);
+    }
+    
+    const avgGain = gains / 14;
+    const avgLoss = losses / 14;
+    
+    if (avgLoss === 0) return 100;
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+  }
+
+  /**
+   * Calcul MACD simplifié (12, 26, 9)
+   */
+  private calculateMACDSignal(candles: any[]): number {
+    if (candles.length < 26) return 0;
+    
+    const prices = candles.map(c => c.close);
+    const ema12 = this.calculateEMA(prices, 12);
+    const ema26 = this.calculateEMA(prices, 26);
+    
+    return ema12 - ema26; // Ligne MACD
+  }
+
+  /**
+   * Calcul EMA (Exponential Moving Average)
+   */
+  private calculateEMA(prices: number[], period: number): number {
+    if (prices.length < period) return prices[prices.length - 1] || 0;
+    
+    const multiplier = 2 / (period + 1);
+    let ema = prices.slice(0, period).reduce((sum, price) => sum + price, 0) / period;
+    
+    for (let i = period; i < prices.length; i++) {
+      ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+    }
+    
+    return ema;
+  }
+
+  /**
+   * Calcul SMA (Simple Moving Average)
+   */
+  private calculateSMA(candles: any[], period: number): number {
+    if (candles.length < period) return candles[candles.length - 1]?.close || 0;
+    
+    const prices = candles.slice(-period).map(c => c.close);
+    return prices.reduce((sum, price) => sum + price, 0) / period;
   }
 
   private async executeSignal(botInstance: BotInstance, signal: TradingSignal, config: any): Promise<void> {
@@ -415,6 +609,21 @@ export class BotController {
         // Sauvegarder les stats en temps réel après chaque trade
         await DatabasePersistence.upsertBotStats(botInstance);
         
+        // Émettre l'événement WebSocket de trade exécuté
+        if (this.webSocketServer) {
+          this.webSocketServer.emitTradeExecuted({
+            botId: botInstance.bot.id,
+            userId: botInstance.bot.userId, // Assurez-vous que le userId est disponible
+            symbol: signal.symbol,
+            side: signal.action,
+            quantity: signal.quantity,
+            price: executionPrice,
+            profit: tradeProfit,
+            type: tradeProfit > 0 ? 'win' : 'loss',
+            timestamp: Date.now()
+          });
+        }
+        
         log.info('[BotController] Stats updated with realistic profit calculation', {
           botId: botInstance.bot.id,
           newStats: botInstance.stats,
@@ -445,29 +654,65 @@ export class BotController {
   }
 
   private checkRiskLimits(botInstance: BotInstance, signal: TradingSignal, config: any): boolean {
-    // Vérifications de base des limites de risque
     const riskLimits = config.riskLimits;
+    const portfolioValue = config.initialAllocation.initialAmount;
     
-    // Vérifier la taille de position maximale
-    const positionValue = signal.quantity * (signal.price || 1000); // Prix approximatif
-    const maxPositionValue = config.initialAllocation.initialAmount * riskLimits.maxPositionSize;
+    // 1. Vérifier la taille de position maximale
+    const positionValue = signal.quantity * (signal.price || 1000);
+    const maxPositionValue = portfolioValue * riskLimits.maxPositionSize;
     
     if (positionValue > maxPositionValue) {
       log.warn('[BotController] Position size exceeds limit', {
         botId: botInstance.bot.id,
         positionValue,
-        maxPositionValue
+        maxPositionValue,
+        maxPositionPercent: (riskLimits.maxPositionSize * 100).toFixed(1) + '%'
       });
       return false;
     }
 
-    // Vérifier le nombre d'erreurs
-    if (botInstance.stats.errors > 5) {
+    // 2. Vérifier les pertes journalières maximales
+    const dailyLossPercent = Math.abs(botInstance.stats.profit) / portfolioValue;
+    if (dailyLossPercent > riskLimits.maxDailyLoss) {
+      log.warn('[BotController] Daily loss limit exceeded', {
+        botId: botInstance.bot.id,
+        dailyLossPercent: (dailyLossPercent * 100).toFixed(2) + '%',
+        maxDailyLoss: (riskLimits.maxDailyLoss * 100).toFixed(1) + '%'
+      });
+      return false;
+    }
+
+    // 3. Vérifier le drawdown maximum
+    const drawdownPercent = Math.abs(botInstance.stats.profit) / portfolioValue;
+    if (drawdownPercent > riskLimits.maxDrawdown) {
+      log.warn('[BotController] Maximum drawdown exceeded', {
+        botId: botInstance.bot.id,
+        drawdownPercent: (drawdownPercent * 100).toFixed(2) + '%',
+        maxDrawdown: (riskLimits.maxDrawdown * 100).toFixed(1) + '%'
+      });
+      return false;
+    }
+
+    // 4. Vérifier le nombre d'erreurs consécutives
+    if (botInstance.stats.errors > 10) {
       log.warn('[BotController] Too many errors, suspending trading', {
         botId: botInstance.bot.id,
         errors: botInstance.stats.errors
       });
       return false;
+    }
+
+    // 5. Vérifier le taux de réussite minimum
+    if (botInstance.stats.trades > 10) {
+      const winRate = botInstance.stats.winningTrades / botInstance.stats.trades;
+      if (winRate < 0.2) { // Au moins 20% de réussite après 10 trades
+        log.warn('[BotController] Win rate too low, suspending trading', {
+          botId: botInstance.bot.id,
+          winRate: (winRate * 100).toFixed(1) + '%',
+          totalTrades: botInstance.stats.trades
+        });
+        return false;
+      }
     }
 
     return true;
@@ -607,6 +852,70 @@ export class BotController {
     }
 
     return realizedPNL;
+  }
+
+  /**
+   * Configuration de position sizing basée sur la stratégie (recherches 2025)
+   */
+  private getMaxPositionSizeForStrategy(strategy: string): number {
+    switch (strategy) {
+      case 'scalping':
+        return 0.01; // 1% - positions plus petites pour scalping haute fréquence
+      case 'momentum':
+        return 0.04; // 4% - positions moyennes pour trends
+      case 'dca':
+        return 0.02; // 2% - positions régulières pour DCA
+      default:
+        return 0.02; // 2% par défaut
+    }
+  }
+
+  /**
+   * Configuration de stop-loss basée sur la stratégie et la volatilité
+   */
+  private getStopLossForStrategy(strategy: string): number {
+    switch (strategy) {
+      case 'scalping':
+        return 0.005; // 0.5% - stops serrés pour scalping
+      case 'momentum':
+        return 0.03;  // 3% - stops plus larges pour trends
+      case 'dca':
+        return 0.08;  // 8% - stops très larges pour DCA long terme
+      default:
+        return 0.02;  // 2% par défaut
+    }
+  }
+
+  /**
+   * Configuration de take-profit basée sur la stratégie
+   */
+  private getTakeProfitForStrategy(strategy: string): number {
+    switch (strategy) {
+      case 'scalping':
+        return 0.01;  // 1% - profits rapides pour scalping
+      case 'momentum':
+        return 0.06;  // 6% - profits moyens pour trends
+      case 'dca':
+        return 0.15;  // 15% - profits élevés pour DCA long terme
+      default:
+        return 0.04;  // 4% par défaut
+    }
+  }
+
+  /**
+   * Indicateurs techniques appropriés pour chaque stratégie
+   */
+  private getIndicatorsForStrategy(strategy: string): string[] {
+    switch (strategy) {
+      case 'scalping':
+        return ['RSI', 'MACD', 'BollingerBands', 'Stochastic'];
+      case 'momentum':
+        return ['RSI', 'MACD', 'EMA', 'ADX'];
+      case 'dca':
+        return ['SMA', 'RSI', 'MACD'];
+      default:
+        return ['RSI', 'MACD'];
+    }
   }
 
   getStats(): {

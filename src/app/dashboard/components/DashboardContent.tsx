@@ -19,7 +19,7 @@ export default function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards - Version améliorée */}
+      {/* KPI Cards */}
       <KPICards key={`kpi-${refreshKey}`} />
 
       {/* Graphique de Performance Principal avec bouton de création */}

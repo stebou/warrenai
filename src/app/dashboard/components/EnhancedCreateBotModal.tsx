@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -16,10 +16,16 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
+  CheckCircle2,
   AlertTriangle,
   DollarSign,
-  Activity
+  Activity,
+  Building2,
+  Globe
 } from 'lucide-react';
+import ExchangeSelector, { type ExchangeOption } from '@/components/bot/ExchangeSelector';
+import BinanceConnectionModal from '@/components/bot/BinanceConnectionModal';
+import CryptoPairPicker, { type CryptoPair } from '@/components/bot/CryptoPairPicker';
 
 interface EnhancedCreateBotModalProps {
   open: boolean;
@@ -31,7 +37,47 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedExchange, setSelectedExchange] = useState<ExchangeOption | null>(null);
+  const [selectedPair, setSelectedPair] = useState<CryptoPair | null>(null);
+  const [showBinanceModal, setShowBinanceModal] = useState(false);
+  const [binanceCredentials, setBinanceCredentials] = useState<{ apiKey: string; apiSecret: string; isTestnet: boolean } | null>(null);
+  const [existingCredentials, setExistingCredentials] = useState<any>(null);
+  const [isCheckingCredentials, setIsCheckingCredentials] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Vérifier les credentials existants
+  const checkExistingCredentials = async () => {
+    setIsCheckingCredentials(true);
+    try {
+      const response = await fetch('/api/exchange/credentials');
+      if (response.ok) {
+        const data = await response.json();
+        const binanceTestnetCreds = data.credentials?.find(
+          (cred: any) => cred.exchange === 'BINANCE' && cred.isTestnet === true
+        );
+        if (binanceTestnetCreds) {
+          setExistingCredentials(binanceTestnetCreds);
+          setBinanceCredentials({
+            apiKey: 'existing',
+            apiSecret: 'existing', 
+            isTestnet: true
+          });
+          console.log('✅ Credentials Binance testnet déjà disponibles');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification des credentials:', error);
+    } finally {
+      setIsCheckingCredentials(false);
+    }
+  };
+
+  // Effect pour vérifier les credentials au chargement
+  useEffect(() => {
+    if (open) {
+      checkExistingCredentials();
+    }
+  }, [open]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -42,14 +88,18 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
     targetPairs: ['BTC/USDT'],
     maxAllocation: 10,
     stopLoss: 2,
-    takeProfit: 6
+    takeProfit: 6,
+    exchangeType: 'binance',
+    cryptoPair: ''
   });
 
   const steps = [
     { id: 0, title: 'Template', icon: Sparkles },
-    { id: 1, title: 'Configuration', icon: Settings },
-    { id: 2, title: 'Risques', icon: Shield },
-    { id: 3, title: 'Validation', icon: Check }
+    { id: 1, title: 'Exchange', icon: Building2 },
+    { id: 2, title: 'Cryptomonnaie', icon: Globe },
+    { id: 3, title: 'Configuration', icon: Settings },
+    { id: 4, title: 'Risques', icon: Shield },
+    { id: 5, title: 'Validation', icon: Check }
   ];
 
   const templates = [
@@ -161,6 +211,55 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
       maxAllocation: riskLevel.maxAllocation,
       stopLoss: riskLevel.stopLoss,
       takeProfit: riskLevel.takeProfit
+    });
+  };
+
+  const handleExchangeSelect = (exchange: ExchangeOption) => {
+    console.log('Exchange selected:', exchange.name, 'requiresAuth:', exchange.requiresAuth);
+    setSelectedExchange(exchange);
+    setFormData({
+      ...formData,
+      exchangeType: exchange.type
+    });
+
+    // Si Binance est sélectionné et nécessite une authentification
+    if (exchange.requiresAuth && (exchange.type === 'binance' || exchange.type === 'binance_futures')) {
+      // Vérifier si on a déjà des credentials
+      if (!existingCredentials && !binanceCredentials) {
+        console.log('No existing credentials, opening Binance modal for', exchange.name);
+        setShowBinanceModal(true);
+      } else {
+        console.log('✅ Using existing Binance credentials');
+      }
+    }
+    // Ne pas appeler nextStep() automatiquement - laisser l'utilisateur cliquer sur "Continuer"
+  };
+
+  const handleBinanceConnection = (credentials: { apiKey: string; apiSecret: string; isTestnet: boolean }) => {
+    setBinanceCredentials(credentials);
+    setShowBinanceModal(false);
+    nextStep();
+  };
+
+  const handleExchangeContinue = () => {
+    console.log('Exchange continue clicked. Selected exchange:', selectedExchange?.name, 'has credentials:', !!binanceCredentials, 'existing:', !!existingCredentials);
+    if (selectedExchange?.requiresAuth && (selectedExchange.type === 'binance' || selectedExchange.type === 'binance_futures')) {
+      if (!binanceCredentials && !existingCredentials) {
+        console.log('No Binance credentials found, opening modal');
+        setShowBinanceModal(true);
+        return;
+      }
+    }
+    console.log('Proceeding to next step');
+    nextStep();
+  };
+
+  const handlePairSelect = (pair: CryptoPair) => {
+    setSelectedPair(pair);
+    setFormData({
+      ...formData,
+      cryptoPair: pair.symbol,
+      targetPairs: [pair.symbol]
     });
   };
 
@@ -299,6 +398,9 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
       // Reset form and close modal
       setCurrentStep(0);
       setSelectedTemplate(null);
+      setSelectedExchange(null);
+      setSelectedPair(null);
+      setBinanceCredentials(null);
       setFormData({
         name: '',
         description: '',
@@ -309,7 +411,9 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
         targetPairs: ['BTC/USDT'],
         maxAllocation: 10,
         stopLoss: 2,
-        takeProfit: 6
+        takeProfit: 6,
+        exchangeType: 'binance',
+        cryptoPair: ''
       });
       
       onOpenChange(false);
@@ -337,9 +441,17 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
   const canProceed = () => {
     switch (currentStep) {
       case 0: return selectedTemplate !== null;
-      case 1: return formData.name.trim().length >= 3 && formData.targetPairs.length > 0;
-      case 2: return formData.riskLevel !== '';
-      case 3: return formData.name.trim().length >= 3 && formData.strategy && formData.targetPairs.length > 0;
+      case 1: 
+        // Pour l'étape Exchange, vérifier aussi que les credentials Binance sont présents si nécessaire
+        if (!selectedExchange) return false;
+        if (selectedExchange.requiresAuth && (selectedExchange.type === 'binance' || selectedExchange.type === 'binance_futures')) {
+          return binanceCredentials !== null || existingCredentials !== null; // Credentials nouveaux OU existants
+        }
+        return true;
+      case 2: return selectedPair !== null;
+      case 3: return formData.name.trim().length >= 3;
+      case 4: return formData.riskLevel !== '';
+      case 5: return formData.name.trim().length >= 3 && formData.strategy && formData.targetPairs.length > 0;
       default: return true;
     }
   };
@@ -358,7 +470,7 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-gray-900/95 border border-gray-700/50 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden backdrop-blur-xl relative z-[10000]"
+        className="bg-gray-900/95 border border-gray-700/50 rounded-2xl w-full max-w-4xl max-h-[90vh] backdrop-blur-xl relative z-[10000] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -412,7 +524,7 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto min-h-0">
           {/* Erreur générale */}
           {errors.general && (
             <div className="mb-6 p-3 bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl">
@@ -483,8 +595,45 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
               </motion.div>
             )}
 
-            {/* Step 1: Configuration */}
+            {/* Step 1: Exchange Selection */}
             {currentStep === 1 && (
+              <motion.div
+                key="exchange"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <ExchangeSelector
+                  selectedExchange={selectedExchange?.id || null}
+                  onExchangeSelect={handleExchangeSelect}
+                  onContinue={handleExchangeContinue}
+                  disabled={isLoading}
+                />
+              </motion.div>
+            )}
+
+            {/* Step 2: Cryptocurrency Selection */}
+            {currentStep === 2 && (
+              <motion.div
+                key="crypto"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <CryptoPairPicker
+                  selectedPair={selectedPair?.symbol || null}
+                  onPairSelect={handlePairSelect}
+                  onContinue={() => nextStep()}
+                  exchangeType={selectedExchange?.type}
+                  disabled={isLoading}
+                />
+              </motion.div>
+            )}
+
+            {/* Step 3: Configuration */}
+            {currentStep === 3 && (
               <motion.div
                 key="config"
                 initial={{ opacity: 0, x: 20 }}
@@ -595,8 +744,8 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
               </motion.div>
             )}
 
-            {/* Step 2: Risk Management */}
-            {currentStep === 2 && (
+            {/* Step 4: Risk Management */}
+            {currentStep === 4 && (
               <motion.div
                 key="risk"
                 initial={{ opacity: 0, x: 20 }}
@@ -694,8 +843,8 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
               </motion.div>
             )}
 
-            {/* Step 3: Validation */}
-            {currentStep === 3 && (
+            {/* Step 5: Validation */}
+            {currentStep === 5 && (
               <motion.div
                 key="validation"
                 initial={{ opacity: 0, x: 20 }}
@@ -745,17 +894,47 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-700/50">
-                    <h5 className="font-semibold text-white mb-2">Paires de trading:</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.targetPairs.map((pair) => (
-                        <span
-                          key={pair}
-                          className="px-3 py-1 bg-[#14b8a6]/20 text-[#14b8a6] border border-[#14b8a6]/30 rounded-full text-sm"
-                        >
-                          {pair}
-                        </span>
-                      ))}
+                  <div className="pt-4 border-t border-gray-700/50 space-y-4">
+                    <div>
+                      <h5 className="font-semibold text-white mb-2">Exchange sélectionné:</h5>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          {selectedExchange?.icon || <Building2 className="w-4 h-4 text-white" />}
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{selectedExchange?.name || 'Non sélectionné'}</p>
+                          <p className="text-xs text-gray-400">{selectedExchange?.environment}</p>
+                        </div>
+                        {selectedExchange?.requiresAuth && binanceCredentials && (
+                          <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
+                            ✓ Connecté
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h5 className="font-semibold text-white mb-2">Cryptomonnaie sélectionnée:</h5>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                          {selectedPair?.baseAsset?.charAt(0) || 'N'}
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{selectedPair?.symbol || 'Non sélectionnée'}</p>
+                          <p className="text-xs text-gray-400">
+                            {selectedPair ? `Prix: $${selectedPair.price.toLocaleString()}` : 'Aucune paire sélectionnée'}
+                          </p>
+                        </div>
+                        {selectedPair && (
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            selectedPair.change24h >= 0 
+                              ? 'text-green-400 bg-green-400/10' 
+                              : 'text-red-400 bg-red-400/10'
+                          }`}>
+                            {selectedPair.change24h >= 0 ? '+' : ''}{selectedPair.change24h.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -775,7 +954,7 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-700/50 flex items-center justify-between">
+        <div className="flex-shrink-0 p-6 border-t border-gray-700/50 flex items-center justify-between bg-gray-900/95">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -799,16 +978,34 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
           </div>
 
           {currentStep < steps.length - 1 ? (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={nextStep}
-              disabled={!canProceed()}
-              className="px-6 py-2 bg-gradient-to-r from-[#14b8a6] to-[#10b981] text-white font-semibold rounded-lg hover:from-[#0f9e90] hover:to-[#0d9f73] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              Suivant
-              <ChevronRight className="w-4 h-4" />
-            </motion.button>
+            <div className="flex flex-col items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={nextStep}
+                disabled={!canProceed()}
+                className="px-6 py-2 bg-gradient-to-r from-[#14b8a6] to-[#10b981] text-white font-semibold rounded-lg hover:from-[#0f9e90] hover:to-[#0d9f73] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <ChevronRight className="w-4 h-4" />
+              </motion.button>
+              
+              {/* Message d'aide pour l'étape Exchange */}
+              {currentStep === 1 && selectedExchange?.requiresAuth && !binanceCredentials && !existingCredentials && (
+                <div className="text-xs text-yellow-400 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>Connectez votre compte Binance pour continuer</span>
+                </div>
+              )}
+              
+              {/* Message de confirmation des credentials existants */}
+              {currentStep === 1 && selectedExchange?.requiresAuth && (binanceCredentials || existingCredentials) && (
+                <div className="text-xs text-green-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Credentials Binance configurés ✓</span>
+                </div>
+              )}
+            </div>
           ) : (
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -837,6 +1034,20 @@ export default function EnhancedCreateBotModal({ open, onOpenChange, onBotCreate
 
   // Utiliser createPortal pour rendre la modal au niveau du body pour éviter les problèmes de z-index
   return typeof window !== 'undefined' 
-    ? createPortal(modalContent, document.body) 
+    ? createPortal(
+        <>
+          {modalContent}
+          <BinanceConnectionModal
+            isOpen={showBinanceModal}
+            onClose={() => {
+              console.log('Binance modal closed');
+              setShowBinanceModal(false);
+            }}
+            onSuccess={handleBinanceConnection}
+            isTestnet={selectedExchange?.environment === 'testnet'}
+          />
+        </>,
+        document.body
+      ) 
     : null;
 }
