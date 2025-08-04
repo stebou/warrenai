@@ -38,7 +38,7 @@ export default function TechnicalAnalysis({
           height={height}
           width="100%"
           locale="fr"
-          interval="1H"
+          interval="1h"
           showIntervalTabs={true}
         />
       </div>

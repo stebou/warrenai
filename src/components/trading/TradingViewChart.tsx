@@ -67,11 +67,10 @@ export default function TradingViewChart({
             theme="dark"
             width="100%"
             height={height}
-            interval="1H"
+            interval="1h"
             locale="fr"
             timezone="Europe/Paris"
             style="1"
-            toolbar_bg="#1f2937"
             enable_publishing={false}
             hide_side_toolbar={false}
             save_image={false}
@@ -80,17 +79,6 @@ export default function TradingViewChart({
               "RSI@tv-basicstudies"
             ]}
             onLoad={handleWidgetLoad}
-            hide_legend={false}
-            hide_volume={false}
-            backgroundColor="#111827"
-            gridColor="#374151"
-            hide_top_toolbar={false}
-            watchlist={[
-              "BINANCE:BTCUSDT",
-              "BINANCE:ETHUSDT", 
-              "BINANCE:ADAUSDT",
-              "BINANCE:SOLUSDT"
-            ]}
           />
         </div>
       </div>
