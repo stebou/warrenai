@@ -68,23 +68,46 @@ export async function POST(req: Request) {
     }, { status: 201 });
 
   } catch (error) {
-    log.error('Failed to create bot', { error });
+    // Logging détaillé pour diagnostiquer le problème
+    const errorInfo = {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : typeof error,
+      stack: error instanceof Error ? error.stack : null,
+      code: error && typeof error === 'object' && 'code' in error ? error.code : null,
+      meta: error && typeof error === 'object' && 'meta' in error ? error.meta : null,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+    };
+    
+    log.error('Failed to create bot - detailed error', errorInfo);
 
     // Gestion d'erreur améliorée avec détails pour le debug
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      log.error('Prisma error details', { code: error.code, meta: error.meta });
+      
       // Erreur spécifique si l'utilisateur n'est pas trouvé (P2025)
       if (error.code === 'P2025') {
         return NextResponse.json({ error: 'User not found in database. Please ensure webhook is working.' }, { status: 404 });
       }
+      
+      // Erreur de validation (P2002 = unique constraint)
+      if (error.code === 'P2002') {
+        return NextResponse.json({ error: 'Bot name already exists or constraint violation.' }, { status: 409 });
+      }
     }
 
-    // Pour le debug : retourner plus de détails en développement
-    const isDev = process.env.NODE_ENV === 'development';
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // Erreur spécifique pour les champs inconnus
+    if (errorInfo.message.includes('Unknown arg') || errorInfo.message.includes('Unknown argument')) {
+      log.error('Prisma schema mismatch detected', { errorMessage: errorInfo.message });
+      return NextResponse.json({ 
+        error: 'Database schema mismatch. Please contact support.',
+        details: 'The database client may need to be regenerated.'
+      }, { status: 500 });
+    }
     
     return NextResponse.json({ 
       error: 'Failed to create bot',
-      ...(isDev && { details: errorMessage, stack: error instanceof Error ? error.stack : null })
+      details: errorInfo.message,
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }
