@@ -1,30 +1,35 @@
 'use client';
 
-import { AdvancedRealTimeChart } from 'react-ts-tradingview-widgets';
+import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { TrendingUp, Settings, Maximize2 } from 'lucide-react';
 
+// Dynamically import the TradingView widget to disable SSR
+const AdvancedRealTimeChart = dynamic(
+  () => import('react-ts-tradingview-widgets').then(mod => mod.AdvancedRealTimeChart),
+  { ssr: false }
+);
+
 interface TradingViewChartProps {
   symbol?: string;
-  height?: string;
+  height?: number;
   className?: string;
 }
 
-export default function TradingViewChart({ 
-  symbol = "BINANCE:BTCUSDT", 
-  height = "500",
-  className = ""
+export default function TradingViewChart({
+  symbol = 'BINANCE:BTCUSDT',
+  height = 500,
+  className = ''
 }: TradingViewChartProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [currentSymbol, setCurrentSymbol] = useState(symbol);
 
   useEffect(() => {
     setCurrentSymbol(symbol);
+    // Minor delay to simulate load event
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
   }, [symbol]);
-
-  const handleWidgetLoad = () => {
-    setIsLoading(false);
-  };
 
   return (
     <div className={`bg-gray-900 rounded-xl border border-gray-700 overflow-hidden ${className}`}>
@@ -39,7 +44,6 @@ export default function TradingViewChart({
             <p className="text-sm text-gray-400">{currentSymbol}</p>
           </div>
         </div>
-        
         <div className="flex items-center space-x-2">
           <button className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-800 rounded-lg transition-colors">
             <Settings className="w-4 h-4" />
@@ -51,7 +55,7 @@ export default function TradingViewChart({
       </div>
 
       {/* Chart Container */}
-      <div className="relative">
+      <div className="relative" style={{ width: '100%', height }}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
             <div className="flex items-center space-x-3">
@@ -60,13 +64,12 @@ export default function TradingViewChart({
             </div>
           </div>
         )}
-        
-        <div className="tradingview-chart-container">
+        <div className="tradingview-chart-container" style={{ width: '100%', height }}>
           <AdvancedRealTimeChart
             symbol={currentSymbol}
             theme="dark"
             width="100%"
-            height="500"
+            height={height}
             interval="60"
             locale="en"
             timezone="Etc/UTC"
