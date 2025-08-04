@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   } catch (error) {
     log.error('Failed to create bot', { error });
 
-    // Gestion d'erreur améliorée
+    // Gestion d'erreur améliorée avec détails pour le debug
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       // Erreur spécifique si l'utilisateur n'est pas trouvé (P2025)
       if (error.code === 'P2025') {
@@ -78,7 +78,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Erreur générique pour tous les autres cas
-    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+    // Pour le debug : retourner plus de détails en développement
+    const isDev = process.env.NODE_ENV === 'development';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    return NextResponse.json({ 
+      error: 'Failed to create bot',
+      ...(isDev && { details: errorMessage, stack: error instanceof Error ? error.stack : null })
+    }, { status: 500 });
   }
 }
