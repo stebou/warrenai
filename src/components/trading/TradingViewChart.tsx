@@ -65,20 +65,14 @@ export default function TradingViewChart({
           <AdvancedRealTimeChart
             symbol={currentSymbol}
             theme="dark"
-            width="100%"
-            height={height}
-            interval="1h"
+            autosize
+            interval="60"
             locale="fr"
             timezone="Europe/Paris"
             style="1"
             enable_publishing={false}
             hide_side_toolbar={false}
             save_image={false}
-            studies={[
-              "MASimple@tv-basicstudies",
-              "RSI@tv-basicstudies"
-            ]}
-            onLoad={handleWidgetLoad}
           />
         </div>
       </div>

@@ -35,7 +35,6 @@ export default function TechnicalAnalysis({
           symbol={symbol}
           colorTheme="dark"
           isTransparent={true}
-          height={height}
           width="100%"
           locale="fr"
           interval="1h"
