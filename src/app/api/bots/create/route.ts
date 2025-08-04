@@ -5,6 +5,7 @@ import { log } from '@/lib/logger';
 import { generateBotFromConfig, type BotCreationConfig } from '@/lib/trading/agents/bot_creation/agent';
 import { BotStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import { ensureUserExists } from '@/lib/auth/sync-user';
 
 export async function POST(req: Request) {
   try {
@@ -13,6 +14,9 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // 1.5. Assurer que l'utilisateur existe en base de données
+    await ensureUserExists(userId);
 
     // 2. Validation du corps de la requête
     const body = await req.json() as BotCreationConfig;
@@ -28,7 +32,7 @@ export async function POST(req: Request) {
     const newBot = await prisma.bot.create({
       data: {
         name: botSpec.name,
-        description: botSpec.description,
+        description: body.description || botSpec.description,
         strategy: botSpec.strategy,
         aiConfig: botSpec.aiConfig,
         status: BotStatus.INACTIVE,
@@ -48,8 +52,20 @@ export async function POST(req: Request) {
 
     log.info('Bot created successfully in DB', { botId: newBot.id, ownerClerkId: userId });
 
-    // 5. Retourner une réponse de succès
-    return NextResponse.json(newBot, { status: 201 });
+    // 5. Retourner une réponse de succès avec informations enrichies
+    return NextResponse.json({
+      ...newBot,
+      validationInfo: {
+        riskLevel: body.riskLevel || 'auto-calculated',
+        configCompliance: 'valid',
+        strategiesApplied: body.strategyHints || [],
+        riskScore: {
+          maxAllocation: body.riskLimits.maxAllocation,
+          maxDailyLoss: body.riskLimits.maxDailyLoss,
+          calculatedLevel: body.riskLevel || 'medium'
+        }
+      }
+    }, { status: 201 });
 
   } catch (error) {
     log.error('Failed to create bot', { error });

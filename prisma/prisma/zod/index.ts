@@ -62,6 +62,8 @@ export const BotScalarFieldEnumSchema = z.enum(['id','name','description','strat
 
 export const TradingSessionScalarFieldEnumSchema = z.enum(['id','botId','startedAt','endedAt','performance','log']);
 
+export const BotStatsScalarFieldEnumSchema = z.enum(['id','botId','startedAt','lastAction','trades','profit','errors','winningTrades','losingTrades','isRunning','sessionData','updatedAt']);
+
 export const SubscriptionScalarFieldEnumSchema = z.enum(['id','userId','stripeId','priceId','status','createdAt']);
 
 export const SortOrderSchema = z.enum(['asc','desc']);
@@ -138,6 +140,27 @@ export const TradingSessionSchema = z.object({
 })
 
 export type TradingSession = z.infer<typeof TradingSessionSchema>
+
+/////////////////////////////////////////
+// BOT STATS SCHEMA
+/////////////////////////////////////////
+
+export const BotStatsSchema = z.object({
+  id: z.string().uuid(),
+  botId: z.string(),
+  startedAt: z.coerce.date(),
+  lastAction: z.coerce.date().nullable(),
+  trades: z.number().int(),
+  profit: z.number(),
+  errors: z.number().int(),
+  winningTrades: z.number().int(),
+  losingTrades: z.number().int(),
+  isRunning: z.boolean(),
+  sessionData: JsonValueSchema.nullable(),
+  updatedAt: z.coerce.date(),
+})
+
+export type BotStats = z.infer<typeof BotStatsSchema>
 
 /////////////////////////////////////////
 // SUBSCRIPTION SCHEMA

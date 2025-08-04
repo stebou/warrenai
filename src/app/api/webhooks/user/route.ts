@@ -41,8 +41,17 @@ export async function POST(req: NextRequest) {
   const eventType: string = event.type;
   const user = event.data as ClerkUserPayload;
   
-  console.log('[WEBHOOK] Event received:', { eventType, userId: user?.id, isDev });
-  console.log('[WEBHOOK] Raw event:', JSON.stringify(event, null, 2));
+  console.log('[WEBHOOK] Event received:', { 
+    eventType, 
+    userId: user?.id, 
+    isDev,
+    userEmail: user.email_addresses?.[0]?.email_address || 'no-email',
+    timestamp: new Date().toISOString()
+  });
+  
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[WEBHOOK] Raw event (dev only):', JSON.stringify(event, null, 2));
+  }
 
   if (!user?.id) {
     console.error('[WEBHOOK] Missing user id in payload', { user, event });
@@ -77,7 +86,12 @@ export async function POST(req: NextRequest) {
           ...(user.external_id !== undefined ? { externalId: user.external_id } : {}),
         },
       });
-      console.log(`[WEBHOOK] User ${user.id} upserted (${eventType}).`);
+      console.log(`[WEBHOOK] ✅ User ${user.id} upserted successfully (${eventType})`, {
+        email: emailFromList,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        timestamp: new Date().toISOString()
+      });
     } else if (eventType === 'user.deleted') {
       await prisma.user.deleteMany({ where: { clerkId: user.id } });
       console.log(`[WEBHOOK] User ${user.id} deleted.`);

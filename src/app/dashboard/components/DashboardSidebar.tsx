@@ -13,41 +13,82 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  User
+  User,
+  TrendingUp,
+  Zap
 } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 
-export default function DashboardSidebar() {
+interface DashboardSidebarProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+export default function DashboardSidebar({ isOpen, onToggle }: DashboardSidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { user } = useUser();
   const { signOut } = useClerk();
 
   const menuItems = [
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Bots', href: '/dashboard/bots', icon: Bot },
-    { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-    { name: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase },
-    { name: 'History', href: '/dashboard/history', icon: History },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings }
+    { name: 'Vue d\'ensemble', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Bots Trading', href: '/dashboard/bots', icon: Bot },
+    { name: 'Test Bots', href: '/dashboard/test', icon: Zap },
+    { name: 'Performances', href: '/dashboard/analytics', icon: TrendingUp },
+    { name: 'Portefeuille', href: '/dashboard/portfolio', icon: Briefcase },
+    { name: 'Historique', href: '/dashboard/history', icon: History },
+    { name: 'Paramètres', href: '/dashboard/settings', icon: Settings }
   ];
 
   return (
-    <aside className={`bg-background/20 backdrop-blur-xl border-r border-white/10 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
+    <>
+      {/* Overlay pour mobile uniquement */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onToggle}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-auto bg-black/95 backdrop-blur-xl border-r border-gray-800/50 transition-all duration-300 
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
+        ${isCollapsed ? 'w-20' : 'w-64'}`}>
       <div className="h-full flex flex-col">
-        {/* Logo avec dégradé comme la homepage */}
-        <div className="h-16 flex items-center px-6 border-b border-white/10">
+        {/* Header avec Logo et Toggle */}
+        <div className={`h-16 flex items-center ${isCollapsed ? 'flex-col justify-center gap-1 px-2' : 'justify-between px-6'} border-b border-gray-800/50`}>
           {!isCollapsed ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20">
-                <span className="text-primary-foreground font-bold text-sm">W</span>
+            <>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-[#14b8a6] to-[#10b981] rounded-lg flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-black" />
+                </div>
+                <span className="font-black text-white text-lg">Warren AI</span>
               </div>
-              <span className="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Warren AI</span>
-            </div>
+              
+              {/* Toggle button en haut à droite */}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1.5 text-gray-400 hover:text-white transition-all duration-200 hover:bg-gray-800/50 rounded-lg hover:scale-105"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
           ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center mx-auto shadow-lg backdrop-blur-sm border border-white/20">
-              <span className="text-primary-foreground font-bold text-sm">W</span>
-            </div>
+            <>
+              {/* Logo centré en mode collapsed */}
+              <div className="w-8 h-8 bg-gradient-to-r from-[#14b8a6] to-[#10b981] rounded-lg flex items-center justify-center">
+                <Bot className="w-4 h-4 text-black" />
+              </div>
+              
+              {/* Toggle button en dessous en mode collapsed */}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1 text-gray-400 hover:text-white transition-all duration-200 hover:bg-gray-800/50 rounded-md hover:scale-105"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </>
           )}
         </div>
 
@@ -62,13 +103,13 @@ export default function DashboardSidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${
+                  className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'} text-sm font-semibold rounded-lg transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-lg'
-                      : 'text-foreground hover:text-primary hover:bg-white/10 backdrop-blur-sm border border-transparent hover:border-white/20'
+                      ? 'bg-gradient-to-r from-[#14b8a6] to-[#10b981] text-black shadow-lg'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-800/50 hover:scale-105'
                   }`}
                 >
-                  <IconComponent className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} transition-transform duration-300 ${isActive ? '' : 'group-hover:scale-110'}`} />
+                  <IconComponent className={`${isCollapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5 mr-3'} transition-all duration-300 ${isActive ? '' : 'group-hover:scale-110'}`} />
                   {!isCollapsed && <span>{item.name}</span>}
                 </Link>
               );
@@ -77,33 +118,33 @@ export default function DashboardSidebar() {
         </nav>
 
         {/* User Profile & Logout */}
-        <div className="p-4 border-t border-white/10 space-y-2">
+        <div className="p-4 border-t border-gray-800/50 space-y-2">
           {/* User Info */}
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-3'} py-2`}>
             {!isCollapsed ? (
               <div className="flex items-center gap-3 w-full">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
                   {user?.imageUrl ? (
                     <img src={user.imageUrl} alt={user.firstName || 'User'} className="w-8 h-8 rounded-full" />
                   ) : (
-                    <User className="w-4 h-4 text-primary-foreground" />
+                    <User className="w-4 h-4 text-gray-300" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
+                  <p className="text-sm font-medium text-white truncate">
                     {user?.firstName || 'User'}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs text-gray-400 truncate">
                     {user?.emailAddresses[0]?.emailAddress}
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
                 {user?.imageUrl ? (
                   <img src={user.imageUrl} alt={user.firstName || 'User'} className="w-8 h-8 rounded-full" />
                 ) : (
-                  <User className="w-4 h-4 text-primary-foreground" />
+                  <User className="w-5 h-5 text-gray-300" />
                 )}
               </div>
             )}
@@ -112,25 +153,15 @@ export default function DashboardSidebar() {
           {/* Logout Button */}
           <button
             onClick={() => signOut()}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-400 hover:text-red-300 hover:bg-red-500/10 backdrop-blur-sm border border-transparent hover:border-red-500/20`}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-red-400 hover:text-red-300 hover:bg-red-500/10 hover:scale-105`}
           >
-            <LogOut className={`w-4 h-4 ${isCollapsed ? '' : 'mr-3'}`} />
+            <LogOut className={`${isCollapsed ? 'w-5 h-5' : 'w-4 h-4 mr-3'} transition-all duration-300`} />
             {!isCollapsed && <span>Déconnexion</span>}
           </button>
 
-          {/* Toggle button */}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-primary transition-all duration-300 backdrop-blur-sm hover:bg-white/10 rounded-lg border border-transparent hover:border-white/20 group"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-            ) : (
-              <ChevronLeft className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-            )}
-          </button>
         </div>
       </div>
     </aside>
+    </>
   );
 }

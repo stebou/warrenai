@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TradingAI - Trading automatisé par IA",
-  description: "Créez et gérez vos bots de trading automatisés avec l'intelligence artificielle. Analysez les marchés, optimisez vos stratégies et maximisez vos profits.",
+  title: "Warren AI - Trading Crypto Automatisé par IA",
+  description: "Plateforme de trading crypto alimentée par l'IA. Maximisez vos profits avec l'automatisation intelligente, des stratégies avancées et une gestion des risques de niveau bancaire.",
 };
 
 export default function RootLayout({

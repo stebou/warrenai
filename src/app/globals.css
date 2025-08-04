@@ -34,8 +34,9 @@
   --color-card-foreground: #ffffff;
 }
 
-/* Personnalisation des modales Clerk */
-.cl-rootBox {
+/* Personnalisation des modales Clerk uniquement (Sign In/Up) */
+.cl-signIn-root .cl-rootBox,
+.cl-signUp-root .cl-rootBox {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -50,8 +51,22 @@
   box-sizing: border-box !important;
 }
 
-/* Force le conteneur à être centré */
-.cl-modalContent {
+/* S'assurer que les UserButton ne sont pas affectés */
+.cl-userButton .cl-rootBox {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: auto !important;
+  height: auto !important;
+  display: inline-block !important;
+  z-index: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Force le conteneur des modales à être centré */
+.cl-signIn-root .cl-modalContent,
+.cl-signUp-root .cl-modalContent {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -77,6 +92,22 @@
 /* S'assurer que les liens externes Clerk sont masqués */
 a[href*="clerk.com"],
 a[href*="clerk.dev"] {
+  display: none !important;
+}
+
+/* Masquer le texte "Secured by development mode" dans le UserButton popup */
+.cl-userButtonPopoverFooter,
+.cl-userButtonPopover .cl-footer,
+.cl-userButtonPopover [data-localization-key*="secured"],
+.cl-userButtonPopover [data-localization-key*="development"],
+.cl-userButtonPopoverCard .cl-footer,
+.cl-userButtonTrigger + * .cl-footer {
+  display: none !important;
+}
+
+/* Masquer tout texte contenant "secured" ou "development" dans les popups */
+.cl-userButtonPopover *[class*="footer"],
+.cl-userButtonPopover *[class*="Footer"] {
   display: none !important;
 }
 
@@ -152,4 +183,25 @@ a[href*="clerk.dev"] {
 
 .cl-card::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 175, 55, 0.7);
+}
+
+/* Classes CSS pour l'effet flip card 3D */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.group:hover .group-hover\:rotate-y-180 {
+  transform: rotateY(180deg);
 }

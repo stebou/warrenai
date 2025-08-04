@@ -1,34 +1,20 @@
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
-import KPICards from './components/KPICards';
-import BotsList from './components/BotsList';
-import LiveTradingFeed from './components/LiveTradingFeed';
-import { UserButton } from '@clerk/nextjs';
-import { getUserAuth } from '@/lib/auth/utils';
+import { checkAuth } from '@/lib/auth/utils';
+import { ensureUserExists } from '@/lib/auth/sync-user';
+import DashboardContent from './components/DashboardContent';
 
+// Force dynamic rendering for authenticated pages
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  // Server-side auth check (recommended by Clerk)
-  const { userId } = await auth();
+  // Server-side auth check
+  const userId = await checkAuth();
   
-  if (!userId) {
-    redirect('/sign-in');
+  // Synchronisation utilisateur séparée (pas dans checkAuth pour éviter la boucle)
+  try {
+    await ensureUserExists(userId);
+  } catch (error) {
+    console.error('[DASHBOARD] Failed to sync user:', error);
+    // Continue sans bloquer l'accès au dashboard
   }
-  return (
-    <div className="space-y-6">
-      {/* KPI Cards - Version simplifiée */}
-      <KPICards />
-
-      {/* Contenu principal simplifié */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bots */}
-        <BotsList />
-        
-        {/* Feed Trading */}
-        <LiveTradingFeed />
-
-        
-      </div>
-    </div>
-  );
+  return <DashboardContent />;
 }

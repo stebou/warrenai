@@ -2,7 +2,7 @@
 
 import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-import ThemeToggle from './ThemeToggle';
+import Link from 'next/link';
 
 export default function Navbar() {
   const { user } = useUser();
@@ -12,78 +12,99 @@ export default function Navbar() {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8 }}
-      className="fixed top-0 w-full z-50 bg-background/20 backdrop-blur-xl border-b border-white/10 shadow-lg"
+      className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800/50"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <motion.div 
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.02 }}
             className="flex items-center space-x-3"
           >
-            <motion.div 
-              whileHover={{ rotate: 360, scale: 1.1 }}
-              transition={{ duration: 0.6 }}
-              className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20"
-            >
-              <span className="text-primary-foreground font-bold text-lg">T</span>
-            </motion.div>
-            <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              TradingAI
-            </span>
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-[#14b8a6] to-[#10b981] rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">W</span>
+              </div>
+              <span className="font-bold text-xl text-white">
+                Warren AI
+              </span>
+            </Link>
           </motion.div>
 
+          {/* Navigation links */}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link href="/features" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              Features
+            </Link>
+            <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              Pricing
+            </Link>
+            <Link href="/docs" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              Docs
+            </Link>
+            <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+              About
+            </Link>
+          </div>
+
           <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            
             {user ? (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="backdrop-blur-sm bg-white/10 rounded-full p-1 border border-white/20"
-              >
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-8 h-8"
-                    }
-                  }}
-                />
-              </motion.div>
+              <div className="flex items-center space-x-4">
+                <Link 
+                  href="/dashboard"
+                  className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+                >
+                  Dashboard
+                </Link>
+                <div className="relative z-50">
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        avatarBox: "w-8 h-8",
+                        userButtonBox: "rounded-full",
+                        userButtonPopoverCard: "bg-gray-900 border-gray-700",
+                        userButtonPopoverActionButton: "text-gray-300 hover:text-white hover:bg-gray-800"
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             ) : (
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex items-center space-x-3"
-              >
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <SignInButton mode="modal">
-                    <button className="px-4 py-2 text-foreground hover:text-primary transition-colors backdrop-blur-sm hover:bg-white/10 rounded-lg border border-white/20">
-                      Se connecter
-                    </button>
-                  </SignInButton>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <SignUpButton mode="modal">
-                    <button className="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold rounded-lg hover:opacity-90 transition-opacity shadow-lg backdrop-blur-sm border border-white/30">
-                      Commencer
-                    </button>
-                  </SignUpButton>
-                </motion.div>
-              </motion.div>
+              <div className="flex items-center space-x-3">
+                <SignInButton mode="modal">
+                  <motion.button 
+                    whileHover={{ 
+                      scale: 1.05,
+                      y: -1,
+                      boxShadow: "0 4px 12px rgba(20, 184, 166, 0.2)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    className="px-5 py-2.5 text-sm font-semibold border border-[#14b8a6]/50 text-white hover:text-[#14b8a6] hover:border-[#14b8a6] transition-all duration-200"
+                    style={{ borderRadius: '8px' }}
+                  >
+                    Se connecter
+                  </motion.button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <motion.button 
+                    whileHover={{ 
+                      scale: 1.05,
+                      y: -1,
+                      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    className="px-5 py-2.5 text-sm font-semibold bg-[#10b981] text-black hover:bg-[#10b981]/90 transition-all duration-200"
+                    style={{ borderRadius: '8px' }}
+                  >
+                    S'inscrire
+                  </motion.button>
+                </SignUpButton>
+              </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Ligne décorative glassmorphique */}
-      <motion.div
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: 1, delay: 0.5 }}
-        className="h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-      />
     </motion.nav>
   );
 }

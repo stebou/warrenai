@@ -56,6 +56,7 @@ model Bot {
 
   
   sessions TradingSession[]
+  stats    BotStats?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -77,6 +78,26 @@ model TradingSession {
   log        Json?
 
   bot        Bot      @relation(fields: [botId], references: [id])
+}
+
+// Nouvelle table pour la persistance des stats de trading en temps réel
+model BotStats {
+  id            String   @id @default(uuid())
+  botId         String   @unique
+  startedAt     DateTime @default(now())
+  lastAction    DateTime?
+  trades        Int      @default(0)
+  profit        Float    @default(0.0)
+  errors        Int      @default(0)
+  winningTrades Int      @default(0)  // Nouveaux champs pour tracking des trades gagnants/perdants
+  losingTrades  Int      @default(0)
+  isRunning     Boolean  @default(false)
+  sessionData   Json?    // Pour stocker des données additionnelles (positions, etc.)
+  updatedAt     DateTime @updatedAt
+
+  bot           Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  
+  @@map("bot_stats")
 }
 
 model Subscription {

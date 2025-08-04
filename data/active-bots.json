@@ -1,0 +1,32 @@
+[
+  {
+    "id": "cmdvzq21k0000s6uxoefz60j2",
+    "startedAt": 1754261321971,
+    "stats": {
+      "trades": 6,
+      "profit": -160.01136776157892,
+      "errors": 0
+    },
+    "lastAction": 1754261922001
+  },
+  {
+    "id": "cmdw7quv20000s64e37qboiy2",
+    "startedAt": 1754261321971,
+    "stats": {
+      "trades": 7,
+      "profit": 79.99007156950829,
+      "errors": 0
+    },
+    "lastAction": 1754261922010
+  },
+  {
+    "id": "cmdw7nt5e0001s6w1vhp7t75r",
+    "startedAt": 1754261321971,
+    "stats": {
+      "trades": 8,
+      "profit": -320.00302012969354,
+      "errors": 0
+    },
+    "lastAction": 1754261922011
+  }
+]

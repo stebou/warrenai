@@ -7,24 +7,281 @@ Prisma schema loaded from prisma/schema.prisma
 
 ✔ Generated Prisma Client (v6.13.0) to ./node_modules/.pnpm/@prisma+client@6.13.0_prisma@6.13.0_typescript@5.9.2__typescript@5.9.2/node_modules/@prisma/client in 40ms
 
-✔ Generated Zod Prisma Types to ./prisma/prisma/zod in 43ms
+✔ Generated Zod Prisma Types to ./prisma/prisma/zod in 44ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
 
 
 > trading@0.1.0 fix-zod /Users/sf/Documents/testing/trading-v1
 > node scripts/fix-zod-types.js
 
 ✅ Zod JsonValue types fixed successfully
- ⚠ Port 3000 is in use by process 7479
-78457, using available port 3001 instead.
+ ⚠ Port 3000 is in use by process 26414, using available port 3001 instead.
    ▲ Next.js 15.4.5
    - Local:        http://localhost:3001
    - Network:      http://192.168.1.120:3001
-   - Environments: .env
+   - Environments: .   Reload env: .env
+   Reload env: .env
+   Reload env: .env
+[?25h
+e in 281ms (217 modules)
+Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ⨯ unhandledRejection: Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ⨯ unhandledRejection:  Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ○ Compiling /api/bots ...
+ ✓ Compiled /api/bots in 703ms (402 modules)
+ GET /api/bots 401 in 1164ms
+ ✓ Compiled in 667ms (403 modules)
+Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ⨯ unhandledRejection: Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ⨯ unhandledRejection:  Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ✓ Compiled /api/exchange/test in 253ms (402 modules)
+ GET /api/exchange/test 401 in 343ms
+ ✓ Compiled in 297ms (403 modules)
+ ✓ Compiled in 94ms (403 modules)
+ ✓ Compiled in 160ms (403 modules)
+Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ⨯ unhandledRejection: Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ⨯ unhandledRejection:  Error: NEXT_HTTP_ERROR_FALLBACK;404
+    at notFound (../../../src/client/components/not-found.ts:25:16)
+    at eval (src/middleware.ts:17:9)
+  23 | export function notFound(): never {
+  24 |   // eslint-disable-next-line no-throw-literal
+> 25 |   const error = new Error(DIGEST) as HTTPAccessFallbackError
+     |                ^
+  26 |   ;(error as HTTPAccessFallbackError).digest = DIGEST
+  27 |
+  28 |   throw error {
+  digest: 'NEXT_HTTP_ERROR_FALLBACK;404'
+}
+ ✓ Compiled /api/bots/status in 305ms (405 modules)
+ GET /api/bots/status 401 in 399ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.9s (1848 modules)
+ HEAD / 200 in 3395ms
+ ✓ Compiled in 904ms (792 modules)
+ ✓ Compiled in 288ms (792 modules)
+ ✓ Compiled in 306ms (792 modules)
+ ✓ Compiled in 309ms (791 modules)
+ ✓ Compiled in 214ms (791 modules)
+ ✓ Compiled in 152ms (791 modules)
+ ✓ Compiled in 370ms (791 modules)
+ ✓ Compiled in 157ms (791 modules)
+ ✓ Compiled in 168ms (791 modules)
+ ✓ Compiled in 178ms (791 modules)
+ ✓ Compiled in 265ms (791 modules)
+ ✓ Compiled in 222ms (791 modules)
+ ✓ Compiled in 153ms (791 modules)
+ ✓ Compiled in 226ms (791 modules)
+ ✓ Compiled in 168ms (791 modules)
+ ✓ Compiled in 782ms (791 modules)
+ ✓ Compiled in 524ms (791 modules)
+ ✓ Compiled in 349ms (791 modules)
+ ✓ Compiled in 186ms (791 modules)
+ ✓ Compiled in 394ms (791 modules)
+ ✓ Compiled in 209ms (791 modules)
+ ✓ Compiled in 261ms (791 modules)
+ ✓ Compiled in 436ms (791 modules)
+ ✓ Compiled in 385ms (791 modules)
+ ✓ Compiled in 489ms (791 modules)
+ ✓ Compiled in 632ms (791 modules)
+ ⨯ ./src/components/Hero.tsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+     ,-[[36;1;4m/Users/sf/Documents/testing/trading-v1/src/components/Hero.tsx[0m:229:1]
+ [2m226[0m |       </div>
+ [2m227[0m |     </section>
+ [2m228[0m |   );
+ [2m229[0m | }
+     : [35;1m^[0m
+     `----
+  [31mx[0m Expected '</', got 'jsx text (
+  [31m|[0m   );
+  [31m|[0m })'
+     ,-[[36;1;4m/Users/sf/Documents/testing/trading-v1/src/components/Hero.tsx[0m:227:1]
+ [2m224[0m |               </motion.div>
+ [2m225[0m |             </motion.div>
+ [2m226[0m |           </div>
+ [2m227[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m     </section>
+ [2m228[0m | [35;1m|[0m     );
+ [2m229[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m }
+     `----
 
- ✓ Starting...
- ✓ Ready in 1580ms
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Hero.tsx
+./src/app/page.tsx
+ ⨯ ./src/components/Hero.tsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+     ,-[[36;1;4m/Users/sf/Documents/testing/trading-v1/src/components/Hero.tsx[0m:240:1]
+ [2m237[0m |       </div>
+ [2m238[0m |     </section>
+ [2m239[0m |   );
+ [2m240[0m | }
+     : [35;1m^[0m
+     `----
+  [31mx[0m Expected '</', got 'jsx text (
+  [31m|[0m   );
+  [31m|[0m })'
+     ,-[[36;1;4m/Users/sf/Documents/testing/trading-v1/src/components/Hero.tsx[0m:238:1]
+ [2m235[0m |               </motion.div>
+ [2m236[0m |             </motion.div>
+ [2m237[0m |           </div>
+ [2m238[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m     </section>
+ [2m239[0m | [35;1m|[0m     );
+ [2m240[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m }
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Hero.tsx
+./src/app/page.tsx
+ ✓ Compiled in 323ms (791 modules)
+ ✓ Compiled in 312ms (791 modules)
+ ✓ Compiled in 129ms (791 modules)
+ ✓ Compiled in 1266ms (802 modules)
+ ✓ Compiled in 1068ms (802 modules)
+ ✓ Compiled in 474ms (807 modules)
+ ✓ Compiled in 674ms (810 modules)
+ ✓ Compiled in 1107ms (818 modules)
+ ✓ Compiled in 1000ms (818 modules)
+ ✓ Compiled in 482ms (818 modules)
+ ✓ Compiled in 243ms (818 modules)
+ ✓ Compiled in 270ms (818 modules)
+ ✓ Compiled in 353ms (818 modules)
+ ✓ Compiled in 387ms (818 modules)
+ ✓ Compiled in 756ms (818 modules)
+ ✓ Compiled in 799ms (818 modules)
+ ✓ Compiled in 784ms (818 modules)
+ ✓ Compiled in 2.1s (818 modules)
+ ✓ Compiled in 266ms (818 modules)
+ ✓ Compiled in 631ms (818 modules)
+ ✓ Compiled in 329ms (818 modules)
+ ✓ Compiled in 332ms (818 modules)
+ ✓ Compiled in 203ms (818 modules)
+ ✓ Compiled in 219ms (818 modules)
+ ✓ Compiled in 182ms (818 modules)
+ ✓ Compiled in 294ms (818 modules)
+ ✓ Compiled in 503ms (818 modules)
+ ✓ Compiled in 492ms (818 modules)
+ ✓ Compiled in 559ms (818 modules)
+ ✓ Compiled in 263ms (818 modules)
+ ✓ Compiled in 332ms (818 modules)
+ ✓ Compiled in 564ms (818 modules)
+ ✓ Compiled in 1188ms (818 modules)
+ ✓ Compiled in 447ms (818 modules)
+ ✓ Compiled in 385ms (818 modules)
+ ✓ Compiled in 370ms (818 modules)
+   Reload env: .env
+ ✓ Compiled in 932ms (1021 modules)
+ ✓ Compiled in 349ms (818 modules)
+   Reload env: .env
+ ✓ Compiled in 7.8s (1035 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (160kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled in 345ms (818 modules)
+ ✓ Compiled in 163ms (818 modules)
+   Reload env: .env
+ ✓ Compiled in 323ms (1021 modules)
+ ✓ Compiled in 176ms (818 modules)
+ ✓ Compiled in 151ms (818 modules)
+ ✓ Compiled in 955ms (818 modules)
+ ✓ Compiled in 1922ms (818 modules)
+ ✓ Compiled in 414ms (818 modules)
+ ✓ Compiled in 841ms (818 modules)
+ ✓ Compiled in 318ms (818 modules)
+ ✓ Compiled in 260ms (818 modules)
+ ✓ Compiled in 226ms (818 modules)
 [?25h

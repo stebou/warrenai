@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { env } from '@/lib/env.mjs';
 import { log } from '@/lib/logger';
 import type { LLMClient, BotSpec } from './llm_client';
+import { enhancedCache } from '../cache/enhanced-cache';
 
 export class OpenAIClient implements LLMClient {
   private openai: OpenAI;
@@ -35,10 +36,20 @@ export class OpenAIClient implements LLMClient {
   }
 
   async generateBotSpec(prompt: string): Promise<BotSpec> {
-    log.info('[OpenAIClient] Calling OpenAI API...');
+    const model = 'gpt-4-turbo';
+    const requestParams = { response_format: { type: 'json_object' } };
+    
+    // 1. Vérifier le cache d'abord
+    const cachedResult = enhancedCache.get<BotSpec>(prompt, model, requestParams);
+    if (cachedResult) {
+      log.info('[OpenAIClient] Using cached result, skipping OpenAI API call');
+      return cachedResult;
+    }
+
+    log.info('[OpenAIClient] Cache miss, calling OpenAI API...');
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4-turbo',
+        model,
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
       });
@@ -53,7 +64,7 @@ export class OpenAIClient implements LLMClient {
       
       const parsedSpec = JSON.parse(content) as Omit<BotSpec, 'name'>;
       
-      return {
+      const result: BotSpec = {
         name: 'ai-generated-bot',
         ...parsedSpec,
         aiConfig: {
@@ -65,8 +76,18 @@ export class OpenAIClient implements LLMClient {
           generatedAt: new Date().toISOString(), // <-- 2. Stocker le timestamp
         },
       };
+
+      // 2. Stocker le résultat dans le cache (TTL: 2 heures pour les BotSpecs)
+      enhancedCache.set(prompt, result, model, requestParams, 1000 * 60 * 120);
+      
+      return result;
     } catch (error: any) {
-      return this.createFallbackSpec(prompt, error.message);
+      const fallbackResult = this.createFallbackSpec(prompt, error.message);
+      
+      // 3. Mettre en cache même les fallbacks (TTL court: 5 minutes)
+      enhancedCache.set(prompt, fallbackResult, model + '_fallback', requestParams, 1000 * 60 * 5);
+      
+      return fallbackResult;
     }
   }
 }

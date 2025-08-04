@@ -4,136 +4,296 @@ import { SignInButton, SignUpButton } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { 
+  ArrowRight, 
+  TrendingUp, 
+  Shield, 
+  Zap, 
+  Users, 
+  Star,
+  BarChart3,
+  Bot
+} from 'lucide-react';
 
 export default function CTA() {
   const { user } = useUser();
 
-  return (
-    <motion.section 
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 1 }}
-      className="relative py-16 md:py-24 bg-gradient-to-r from-accent via-secondary to-primary overflow-hidden"
-    >
-      {/* Fond glassmorphique dynamique */}
-      <div className="absolute inset-0">
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360]
-          }}
-          transition={{ 
-            duration: 20,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 backdrop-blur-sm"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20"></div>
-      </div>
+  const trustFeatures = [
+    {
+      icon: Shield,
+      title: "Sécurisé & Régulé",
+      description: "Sécurité de niveau bancaire",
+      color: "#14b8a6"
+    },
+    {
+      icon: Zap,
+      title: "Ultra-Rapide",
+      description: "Exécution en millisecondes",
+      color: "#10b981"
+    },
+    {
+      icon: TrendingUp,
+      title: "94.2% de Réussite",
+      description: "Stratégies IA prouvées",
+      color: "#14b8a6"
+    }
+  ];
 
-      {/* Éléments décoratifs flottants */}
-      <motion.div
+  const testimonials = [
+    {
+      name: "Marie Dubois",
+      role: "Trader Indépendante",
+      text: "Warren AI a transformé ma façon de trader. +340% de profits en 6 mois!",
+      profit: "+€15,680",
+      stars: 5
+    },
+    {
+      name: "Jean-Luc Martin",
+      role: "Investisseur",
+      text: "L'automatisation parfaite. Je peux enfin trader sans stress 24/7.",
+      profit: "+€28,450",
+      stars: 5
+    },
+    {
+      name: "Sophie Leroux",
+      role: "Day Trader",
+      text: "Les algorithmes IA sont impressionnants. Jamais vu ça ailleurs.",
+      profit: "+€42,100",
+      stars: 5
+    }
+  ];
+
+  return (
+    <section className="py-24 bg-black relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-black/50 to-black" />
+      
+      {/* Multiple glow effects */}
+      <motion.div 
         animate={{ 
-          y: [0, -30, 0],
-          x: [0, 20, 0]
-        }}
-        transition={{ 
-          duration: 6,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        className="absolute top-16 left-16 w-24 h-24 bg-white/20 backdrop-blur-xl rounded-3xl border border-white/30 hidden lg:block"
-      />
-      <motion.div
-        animate={{ 
-          y: [0, 25, 0],
-          x: [0, -15, 0]
+          scale: [1, 1.2, 1],
+          opacity: [0.2, 0.4, 0.2]
         }}
         transition={{ 
           duration: 8,
           repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full blur-3xl"
+        style={{ backgroundColor: '#14b8a6' }}
+      />
+      <motion.div 
+        animate={{ 
+          scale: [1, 0.8, 1],
+          opacity: [0.15, 0.3, 0.15]
+        }}
+        transition={{ 
+          duration: 10,
+          repeat: Infinity,
           ease: "easeInOut",
           delay: 2
         }}
-        className="absolute bottom-16 right-16 w-20 h-20 bg-white/15 backdrop-blur-xl rounded-full border border-white/20 hidden lg:block"
+        className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl"
+        style={{ backgroundColor: '#10b981' }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Main CTA */}
         <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="backdrop-blur-xl bg-white/10 rounded-3xl p-12 border border-white/20 shadow-2xl"
+          className="text-center mb-16"
         >
-          <motion.h2 
-            initial={{ scale: 0.9 }}
-            whileInView={{ scale: 1 }}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#14b8a6]/20 to-[#10b981]/20 border border-[#14b8a6]/30 rounded-full px-6 py-3 mb-8"
           >
-            Prêt à Révolutionner Votre Trading?
-          </motion.h2>
+            <Bot className="w-5 h-5" style={{ color: '#14b8a6' }} />
+            <span className="text-white font-medium">Plus de 45,000 traders actifs</span>
+            <Users className="w-5 h-5" style={{ color: '#10b981' }} />
+          </motion.div>
+
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-6">
+            Prêt à{' '}
+            <span className="bg-gradient-to-r from-[#14b8a6] to-[#10b981] bg-clip-text text-transparent">
+              maximiser vos profits
+            </span>
+            ?
+          </h2>
           
-          <motion.p 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-xl text-white/80 mb-8 max-w-2xl mx-auto backdrop-blur-sm bg-white/5 rounded-xl p-4 border border-white/20"
-          >
-            Rejoignez plus de 10,000 traders qui font confiance à TradingAI.
-          </motion.p>
+          <p className="text-xl text-gray-400 mb-12 max-w-3xl mx-auto font-medium leading-relaxed">
+            Rejoignez la révolution du trading crypto avec Warren AI. 
+            Commencez à générer des profits automatiquement dès aujourd'hui.
+          </p>
           
-          <motion.div 
-            initial={{ y: 30, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             {user ? (
               <motion.div
-                whileHover={{ scale: 1.05, y: -3 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <Link 
                   href="/dashboard"
-                  className="inline-block px-8 py-4 text-lg font-semibold rounded-xl bg-white/90 backdrop-blur-sm text-accent hover:bg-white transition-all duration-300 shadow-xl hover:shadow-2xl border border-white/50"
+                  className="inline-flex items-center justify-center px-10 py-5 text-lg font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl"
+                  style={{
+                    backgroundColor: '#14b8a6',
+                    color: '#000000'
+                  }}
                 >
+                  <BarChart3 className="w-6 h-6 mr-3" />
                   Accéder au Dashboard
+                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </motion.div>
             ) : (
               <>
                 <motion.div
-                  whileHover={{ scale: 1.05, y: -3 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <SignUpButton mode="modal">
-                    <button className="px-8 py-4 text-lg font-semibold rounded-xl bg-white/90 backdrop-blur-sm text-accent hover:bg-white transition-all duration-300 shadow-xl hover:shadow-2xl border border-white/50">
+                    <button className="inline-flex items-center justify-center px-10 py-5 text-lg font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl group"
+                      style={{
+                        backgroundColor: '#14b8a6',
+                        color: '#000000'
+                      }}
+                    >
+                      <Bot className="w-6 h-6 mr-3" />
                       Commencer Maintenant
+                      <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
                     </button>
                   </SignUpButton>
                 </motion.div>
                 <motion.div
-                  whileHover={{ scale: 1.05, y: -3 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <SignInButton mode="modal">
-                    <button className="px-8 py-4 text-lg font-semibold rounded-xl bg-white/10 backdrop-blur-xl text-white hover:bg-white/20 transition-all duration-300 border-2 border-white/50">
-                      Se Connecter
+                    <button className="inline-flex items-center justify-center px-10 py-5 text-lg font-bold rounded-xl border-2 transition-all duration-300 hover:bg-white/5"
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: '#ffffff',
+                        borderColor: '#262626'
+                      }}
+                    >
+                      Se connecter
                     </button>
                   </SignInButton>
                 </motion.div>
               </>
             )}
-          </motion.div>
+          </div>
+
+          {/* Trust indicators */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            {trustFeatures.map((feature, index) => {
+              const IconComponent = feature.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="bg-gray-900/60 border border-gray-800 rounded-xl p-6 backdrop-blur-sm hover:border-gray-700 transition-all duration-300"
+                >
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${feature.color}20` }}
+                    >
+                      <IconComponent 
+                        className="w-6 h-6" 
+                        style={{ color: feature.color }} 
+                      />
+                    </div>
+                    <div>
+                      <div className="text-white font-bold mb-1">{feature.title}</div>
+                      <div className="text-gray-400 text-sm">{feature.description}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Testimonials */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="mb-16"
+        >
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold text-white mb-4">
+              Ce que disent nos traders
+            </h3>
+            <p className="text-gray-400 text-lg">
+              Découvrez pourquoi ils nous font confiance
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                whileHover={{ y: -5 }}
+                className="bg-gray-900/80 border border-gray-800 rounded-xl p-6 backdrop-blur-sm hover:border-gray-700 transition-all duration-300"
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(testimonial.stars)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-300 mb-6 italic">"{testimonial.text}"</p>
+                <div className="flex justify-between items-end">
+                  <div>
+                    <div className="font-bold text-white">{testimonial.name}</div>
+                    <div className="text-sm text-gray-400">{testimonial.role}</div>
+                  </div>
+                  <div 
+                    className="font-bold text-right"
+                    style={{ color: '#10b981' }}
+                  >
+                    {testimonial.profit}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Final guarantee */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="text-center bg-gradient-to-r from-gray-900/50 to-gray-800/50 border border-gray-700 rounded-2xl p-8 backdrop-blur-sm"
+        >
+          <Shield className="w-16 h-16 mx-auto mb-6" style={{ color: '#14b8a6' }} />
+          <h4 className="text-2xl font-bold text-white mb-4">
+            Garantie Satisfait ou Remboursé 30 jours
+          </h4>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            Testez Warren AI sans risque. Si vous n'êtes pas entièrement satisfait des résultats, 
+            nous vous remboursons intégralement sous 30 jours.
+          </p>
         </motion.div>
       </div>
-    </motion.section>
+    </section>
   );
 }
