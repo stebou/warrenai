@@ -13,6 +13,11 @@ import PriceTicker from '@/components/trading/PriceTicker';
 import TechnicalAnalysis from '@/components/trading/TechnicalAnalysis';
 import SymbolOverview from '@/components/trading/SymbolOverview';
 import SymbolSelector from '@/components/trading/SymbolSelector';
+import StockMarket from '@/components/trading/StockMarket';
+import TickerWidget from '@/components/trading/TickerWidget';
+import MiniChart from '@/components/trading/MiniChart';
+import Screener from '@/components/trading/Screener';
+import CompanyProfile from '@/components/trading/CompanyProfile';
 
 export default function DashboardContent() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -37,6 +42,9 @@ export default function DashboardContent() {
 
       {/* Prix en temps réel - Ticker horizontal */}
       <PriceTicker />
+
+      {/* Nouveau Ticker Widget */}
+      <TickerWidget />
 
       {/* Graphique de Performance Principal avec bouton de création */}
       <PerformanceChart onBotCreated={handleBotCreated} />
@@ -72,6 +80,26 @@ export default function DashboardContent() {
 
       {/* Vue d'ensemble du marché */}
       <MarketOverview height="400" />
+
+      {/* Section des nouveaux widgets TradingView */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Stock Market Widget */}
+        <StockMarket height="400" />
+        
+        {/* Screener Widget */}
+        <Screener height="400" />
+      </div>
+
+      {/* Section Mini Charts et Company Profile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Mini Charts */}
+        <MiniChart symbol="NASDAQ:AAPL" />
+        <MiniChart symbol="NASDAQ:GOOGL" />
+        <MiniChart symbol="NASDAQ:MSFT" />
+      </div>
+
+      {/* Company Profile Widget */}
+      <CompanyProfile symbol={selectedSymbol} height="500" />
 
       {/* Contenu existant - Stats des bots et données de marché */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
