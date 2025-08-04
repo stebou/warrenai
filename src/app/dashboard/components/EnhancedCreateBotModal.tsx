@@ -26,6 +26,7 @@ import {
 import ExchangeSelector, { type ExchangeOption } from '@/components/bot/ExchangeSelector';
 import BinanceConnectionModal from '@/components/bot/BinanceConnectionModal';
 import CryptoPairPicker, { type CryptoPair } from '@/components/bot/CryptoPairPicker';
+import BinanceLogo from '@/components/icons/BinanceLogo';
 
 interface EnhancedCreateBotModalProps {
   open: boolean;

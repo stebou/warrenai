@@ -3,14 +3,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Building2, 
-  Globe, 
   ShieldCheck, 
   Zap, 
   AlertTriangle,
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
+import BinanceLogo from '@/components/icons/BinanceLogo';
 
 export interface ExchangeOption {
   id: string;
@@ -38,7 +37,7 @@ const exchangeOptions: ExchangeOption[] = [
     description: 'Environnement de test officiel Binance avec faux fonds',
     features: ['API Binance réelle', 'Fonds de test gratuits', 'Comportement identique au mainnet', 'Sécurisé'],
     requiresAuth: true,
-    icon: <Building2 className="w-6 h-6 text-yellow-500" />,
+    icon: <BinanceLogo className="w-6 h-6 text-yellow-500" variant="testnet" />,
     badge: {
       text: 'Test réel',
       color: 'bg-yellow-500'
@@ -54,7 +53,7 @@ const exchangeOptions: ExchangeOption[] = [
     description: 'Trading en direct avec de vrais fonds sur Binance',
     features: ['Vrais profits/pertes', 'Liquidité maximale', 'Toutes les cryptomonnaies', 'Trading professionnel'],
     requiresAuth: true,
-    icon: <Globe className="w-6 h-6 text-green-500" />,
+    icon: <BinanceLogo className="w-6 h-6 text-[#F0B90B]" variant="mainnet" />,
     badge: {
       text: 'Production',
       color: 'bg-red-500'
