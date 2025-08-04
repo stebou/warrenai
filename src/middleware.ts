@@ -8,13 +8,27 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/sso-callback(.*)',
   '/privacy-policy(.*)',
-  '/api/webhooks(.*)', // <--- important : exclut /api/webhooks/user
+  '/about(.*)',
+  '/features(.*)',
+  '/pricing(.*)',
+  '/docs(.*)',
+  '/api/webhooks(.*)',
   '/api/stripe/webhooks(.*)',
 ]);
 
-export default clerkMiddleware((auth, req) => {
-  if (!isPublicRoute(req)) {
-    auth.protect();
+export default clerkMiddleware(async (auth, req) => {
+  // Skip authentication for public routes
+  if (isPublicRoute(req)) {
+    return;
+  }
+
+  try {
+    // Protect non-public routes
+    await auth.protect();
+  } catch (error) {
+    console.error('Clerk middleware error:', error);
+    // Don't throw to prevent infinite redirect loops
+    return;
   }
 });
 

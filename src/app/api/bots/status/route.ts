@@ -11,6 +11,13 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    // Add cache headers to reduce API calls
+    const headers = {
+      'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      'CDN-Cache-Control': 'public, s-maxage=30',
+      'Vercel-CDN-Cache-Control': 'public, s-maxage=30'
+    };
 
     // Récupérer l'utilisateur depuis Clerk ID
     const user = await prisma.user.findUnique({
@@ -127,6 +134,9 @@ export async function GET() {
         totalLosingTrades: userStats.totalLosingTrades,
         winRate: userStats.winRate
       }
+    }, { 
+      status: 200,
+      headers 
     });
 
   } catch (error) {

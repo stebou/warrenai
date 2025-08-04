@@ -258,7 +258,7 @@ export default function BotManagementHub() {
 
   useEffect(() => {
     fetchBots(true); // Chargement initial
-    const interval = setInterval(() => fetchBots(false), 10000); // Rafraîchissements en arrière-plan
+    const interval = setInterval(() => fetchBots(false), 60000); // Rafraîchissements toutes les minutes
     return () => clearInterval(interval);
   }, []);
 

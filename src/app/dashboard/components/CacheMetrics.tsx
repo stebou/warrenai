@@ -68,8 +68,8 @@ export default function CacheMetrics() {
   useEffect(() => {
     fetchMetrics();
     
-    // Rafraîchir les métriques toutes les 30 secondes
-    const interval = setInterval(fetchMetrics, 30000);
+    // Rafraîchir les métriques toutes les 5 minutes (les cache metrics changent lentement)
+    const interval = setInterval(fetchMetrics, 300000);
     return () => clearInterval(interval);
   }, []);
 

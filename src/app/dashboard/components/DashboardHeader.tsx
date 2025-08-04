@@ -53,8 +53,8 @@ export default function DashboardHeader({ onSidebarToggle }: DashboardHeaderProp
 
     fetchBotSummary();
     
-    // Rafraîchir toutes les 30 secondes
-    const interval = setInterval(fetchBotSummary, 30000);
+    // Rafraîchir toutes les 2 minutes
+    const interval = setInterval(fetchBotSummary, 120000);
     return () => clearInterval(interval);
   }, []);
 
