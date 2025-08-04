@@ -1,10 +1,11 @@
 // src/lib/trading/exchanges/exchange_factory.ts
 import { BaseExchange } from './base_exchange';
 import { BinanceExchange } from './binance_exchange';
+import { CoinbaseAdvancedExchange } from './coinbase_advanced_exchange';
 import { prisma } from '@/lib/prisma';
 import { log } from '@/lib/logger';
 
-export type ExchangeType = 'binance' | 'coinbase';
+export type ExchangeType = 'binance' | 'coinbase' | 'coinbase-advanced';
 
 export interface ExchangeConfig {
   type: ExchangeType;
@@ -14,6 +15,9 @@ export interface ExchangeConfig {
   testnet?: boolean; // Pour Binance testnet
   rateLimit?: number;
   userId?: string; // Pour récupérer les clés de l'utilisateur
+  walletId?: string; // Pour Coinbase DeFi
+  network?: 'ethereum' | 'base'; // Pour Coinbase DeFi
+  maxSlippage?: number; // Pour Coinbase DeFi
 }
 
 export class ExchangeFactory {
@@ -43,8 +47,19 @@ export class ExchangeFactory {
         break;
         
       case 'coinbase':
-        // TODO: Implémenter CoinbaseExchange
-        throw new Error('Coinbase exchange not implemented yet.');
+        // TODO: Implémenter CoinbaseExchange (OAuth API)
+        throw new Error('Coinbase OAuth exchange not implemented yet.');
+        
+      case 'coinbase-advanced':
+        if (!config.apiKey || !config.apiSecret) {
+          throw new Error('Coinbase Advanced exchange requires apiKey and apiSecret');
+        }
+        exchange = new CoinbaseAdvancedExchange({
+          apiKey: config.apiKey,
+          apiSecret: config.apiSecret,
+          sandbox: config.sandbox || false
+        }) as any; // Cast temporaire pour compatibilité
+        break;
         
       default:
         throw new Error(`Exchange type ${config.type} not supported`);
